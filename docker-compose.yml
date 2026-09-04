@@ -1,0 +1,20 @@
+services:
+  diplomas_mid:
+    container_name: diplomas-mid-local
+    build:
+      context: .
+    environment:
+      DIPLOMAS_MID_HTTP_PORT: 8090
+      FIRMA_ELECTRONICA_MID_URL: http://host.docker.internal:8080/api
+      DIPLOMAS_CRUD_URL: http://host.docker.internal:8081/v1
+      ADMINISTRATIVA_AMAZON_API_URL: http://api.intranetoas.udistrital.edu.co:8104
+      DOCUMENTOS_CRUD_GESTOR_DOCUMENTAL_URL: http://api.intranetoas.udistrital.edu.co:8502/v1/gestor_documental
+      AWS_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://host.docker.internal:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      DIPLOMAS_S3_BUCKET: diplomas-digital-local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8090:8090"
