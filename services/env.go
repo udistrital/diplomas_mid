@@ -57,7 +57,6 @@ func loadDotEnv(path string) error {
 
 func syncEnvToAppConfig() error {
 	envToConf := map[string]string{
-		"DIPLOMAS_CORS_ALLOWED_ORIGINS":   "CORSAllowedOrigins",
 		"OIKOS_API_URL":                   "OikosAPIURL",
 		"DIPLOMAS_MID_HTTP_PORT":          "httpport",
 		"DIPLOMAS_MID_RUNMODE":            "runmode",
