@@ -20,10 +20,6 @@ const (
 	codigoEstadoDocumentoCreadoDefault = "GENERADO"
 )
 
-type pazYSalvosSemaforoResponse struct {
-	Data []EstudianteAprobadoGrado `json:"Data"`
-}
-
 type parametroItem struct {
 	ID                int64
 	CodigoAbreviacion string
@@ -51,6 +47,9 @@ type DatosDiplomaEstudiante struct {
 }
 
 type EstudianteAprobadoGrado struct {
+	PeriodoID               int64                   `json:"periodo_id"`
+	CodigoEstudianteTexto   string                  `json:"codigo_estudiante_texto"`
+	ProgramaAcademicoMIDID  int64                   `json:"programa_academico_mid_id"`
 	ID                      int64                   `json:"Id"`
 	CodigoEstudiante        int64                   `json:"CodigoEstudiante"`
 	IDFacultadOikos         int64                   `json:"IdFacultadOikos"`
@@ -99,6 +98,7 @@ type EstudiantesAprobadosGradoResult struct {
 }
 
 type ListarAprobadosPorFacultadInput struct {
+	PeriodoID                  int64   `json:"periodo_id"`
 	TipoDocumentoDigitalID     int64   `json:"tipo_documento_digital_id,omitempty"`
 	TipoDocumentoDigitalCodigo string  `json:"tipo_documento_digital_codigo,omitempty"`
 	CodigoEstudiante           int64   `json:"codigo_estudiante,omitempty"`
@@ -109,6 +109,7 @@ type ListarAprobadosPorFacultadInput struct {
 }
 
 type CrearDocumentosAprobadosInput struct {
+	PeriodoID                   int64     `json:"periodo_id"`
 	TipoDocumentoDigitalID      int64     `json:"tipo_documento_digital_id,omitempty"`
 	TipoDocumentoDigitalCodigo  string    `json:"tipo_documento_digital_codigo,omitempty"`
 	EstadoDocumentoID           int64     `json:"estado_documento_id,omitempty"`
@@ -166,7 +167,7 @@ func (e EstudianteAprobadoGrado) DocumentoDigitalRequest(tipoDocumentoDigitalID,
 		CodigoEstudiante:       e.CodigoEstudiante,
 		FacultadID:             e.IDFacultadOikos,
 		ProgramaAcademicoID:    e.IDProyectoOikos,
-		PeriodoID:              int64(e.PerInsGrado),
+		PeriodoID:              e.PeriodoID,
 		Vigencia:               e.AnioInsGrado,
 		Activo:                 true,
 	}
@@ -198,7 +199,10 @@ func (e EstudianteAprobadoGrado) DiplomaDigitalRequest(fechaGrado time.Time, est
 }
 
 func (s EstudianteGradoService) ListarAprobadosPorFacultad(ctx context.Context, input *ListarAprobadosPorFacultadInput) (*EstudiantesAprobadosGradoResult, error) {
-	estudiantes, err := s.consultarEstudiantesAprobados(ctx)
+	if input == nil {
+		return nil, fmt.Errorf("%w: periodo_id es obligatorio", ErrInvalidInput)
+	}
+	estudiantes, err := s.consultarEstudiantesAprobados(ctx, input.PeriodoID)
 	if err != nil {
 		return nil, err
 	}
@@ -228,6 +232,10 @@ func (s EstudianteGradoService) CrearDocumentosAprobados(ctx context.Context, in
 	if input == nil {
 		return nil, fmt.Errorf("%w: request body is required", ErrInvalidInput)
 	}
+	if input.PeriodoID <= 0 {
+		return nil, fmt.Errorf("%w: periodo_id es obligatorio", ErrInvalidInput)
+	}
+
 	tipoDocumentoDigitalID, err := resolverParametroID(
 		ctx,
 		input.TipoDocumentoDigitalID,
@@ -259,7 +267,7 @@ func (s EstudianteGradoService) CrearDocumentosAprobados(ctx context.Context, in
 		}
 	}
 
-	estudiantes, err := s.consultarEstudiantesAprobados(ctx)
+	estudiantes, err := s.consultarEstudiantesAprobados(ctx, input.PeriodoID)
 	if err != nil {
 		return nil, err
 	}
@@ -396,23 +404,8 @@ func filtrarEstudiantesAprobados(estudiantes []EstudianteAprobadoGrado, input Li
 	return filtrados
 }
 
-func (s EstudianteGradoService) consultarEstudiantesAprobados(ctx context.Context) ([]EstudianteAprobadoGrado, error) {
-	endpoint := fmt.Sprintf(
-		"%s/v1/semaforo?query=%s&limit=-1",
-		pazYSalvosCrudURL(),
-		url.QueryEscape(pazYSalvosAprobadosQuery()),
-	)
-
-	var response pazYSalvosSemaforoResponse
-	status, err := request.GetWithContext(ctx, endpoint, &response)
-	if err != nil {
-		return nil, fmt.Errorf("%w: paz_y_salvos_crud semaforo status %d: %v", ErrExternalService, status, err)
-	}
-	if status < 200 || status >= 300 {
-		return nil, fmt.Errorf("%w: paz_y_salvos_crud semaforo returned status %d", ErrExternalService, status)
-	}
-
-	return response.Data, nil
+func (s EstudianteGradoService) consultarEstudiantesAprobados(ctx context.Context, periodoID int64) ([]EstudianteAprobadoGrado, error) {
+	return consultarAprobadosMID(ctx, periodoID)
 }
 
 func enriquecerEstudiantesAprobados(ctx context.Context, estudiantes []EstudianteAprobadoGrado) ([]EstudianteAprobadoGrado, error) {

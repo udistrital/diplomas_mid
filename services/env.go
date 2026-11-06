@@ -57,14 +57,16 @@ func loadDotEnv(path string) error {
 
 func syncEnvToAppConfig() error {
 	envToConf := map[string]string{
+		"DIPLOMAS_CORS_ALLOWED_ORIGINS":         "CORSAllowedOrigins",
+		"OIKOS_API_URL":                         "OikosAPIURL",
 		"DIPLOMAS_MID_HTTP_PORT":                "httpport",
 		"DIPLOMAS_MID_RUNMODE":                  "runmode",
 		"FIRMA_ELECTRONICA_MID_URL":             "FirmaElectronicaMidURL",
 		"DIPLOMAS_CRUD_URL":                     "DiplomasCrudURL",
 		"ADMINISTRATIVA_AMAZON_API_URL":         "AdministrativaAmazonAPIURL",
-		"DOCUMENTOS_CRUD_GESTOR_DOCUMENTAL_URL": "DocumentosCrudGestorDocumentalURL",
-		"GESTOR_DOCUMENTAL_DOCUMENT_URL":        "GestorDocumentalDocumentURL",
-		"PAZ_Y_SALVOS_CRUD_URL":                 "PazYSalvosCrudURL",
+		"DOCUMENTOS_CRUD_URL":                   "DocumentosCrudURL",
+		"GESTOR_DOCUMENTAL_URL":                "GestorDocumentalURL",
+		"PAZ_Y_SALVOS_MID_URL":                  "PazYSalvosMidURL",
 		"ACADEMICA_CORE_SERVICE_URL":            "AcademicaCoreServiceURL",
 		"PARAMETROS_CRUD_URL":                   "ParametrosCrudURL",
 		"DIPLOMA_INSTITUTIONAL_LOGO_PATH":       "DiplomaInstitutionalLogoPath",

@@ -98,7 +98,10 @@ func (s FirmanteService) ConsultarRolActivo(ctx context.Context, documentoIdenti
 		}
 
 		firma, err := s.consultarFirmaActiva(ctx, supervisor.Documento)
-		if err == nil && firma != nil {
+		if err != nil {
+			return nil, fmt.Errorf("%w: consultar rúbrica activa: %w", ErrExternalService, err)
+		}
+		if firma != nil {
 			firmante.EnlaceFirma = firma.EnlaceFirma
 			firmante.FirmaFirmante = firma
 			if firmaImagen, err := consultarFirmaGraficaFirmante(ctx, supervisor.Documento); err == nil {
@@ -118,11 +121,12 @@ func (s FirmanteService) consultarFirmaActiva(ctx context.Context, documentoIden
 
 	var firmas []FirmaFirmanteCRUDResponse
 	status, err := request.GetWithContext(ctx, endpoint, &firmas)
-	if err != nil {
-		return nil, fmt.Errorf("diplomas_crud firma_firmante status %d: %w", status, err)
-	}
 	if status == 404 {
 		return nil, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("diplomas_crud firma_firmante status %d: %w", status, err)
 	}
 	if status < 200 || status >= 300 {
 		return nil, fmt.Errorf("diplomas_crud firma_firmante returned status %d", status)

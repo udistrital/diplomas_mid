@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -21,7 +22,11 @@ func (c *FirmaFirmanteController) SubirFirma() {
 		return
 	}
 
-	result, err := c.Service.SubirFirma(c.Ctx.Request.Context(), payload)
+	ctx := c.Ctx.Request.Context()
+	if token := c.Ctx.Request.Header.Get("Authorization"); token != "" {
+		ctx = context.WithValue(ctx, "Authorization", token)
+	}
+	result, err := c.Service.SubirFirma(ctx, payload)
 	if err != nil {
 		c.writeError(mapServiceError(err), err)
 		return

@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
@@ -15,14 +14,6 @@ type CeremoniaController struct {
 
 func (c *CeremoniaController) URLMapping() {}
 
-func (c *CeremoniaController) requestContext() context.Context {
-	ctx := c.Ctx.Request.Context()
-	if token := c.Ctx.Request.Header.Get("Authorization"); token != "" {
-		ctx = context.WithValue(ctx, "Authorization", token)
-	}
-	return ctx
-}
-
 func (c *CeremoniaController) writeFirmaMasiva(result *services.FirmaMasivaCeremoniaResult) {
 	status := http.StatusOK
 	if result != nil && result.Firmados == 0 && result.Errores > 0 {
@@ -33,7 +24,7 @@ func (c *CeremoniaController) writeFirmaMasiva(result *services.FirmaMasivaCerem
 
 func (c *CeremoniaController) Listar() {
 	documento, _ := strconv.ParseInt(c.GetString("documento_identidad_secretario"), 10, 64)
-	result, err := c.Service.Listar(c.requestContext(), &services.ListarCeremoniasInput{DocumentoIdentidadSecretario: documento})
+	result, err := c.Service.Listar(c.requestContext(), &services.ListarCeremoniasInput{PeriodoID: periodoQuery(c.GetString("periodo_id")), DocumentoIdentidadSecretario: documento})
 	if err != nil {
 		c.writeError(mapServiceError(err), err)
 		return
@@ -295,7 +286,7 @@ func (c *CeremoniaController) EstudiantesPrograma() {
 		return
 	}
 	documento, _ := strconv.ParseInt(c.GetString("documento_identidad_secretario"), 10, 64)
-	result, err := c.Service.EstudiantesPrograma(c.requestContext(), &services.EstudiantesProgramaCeremoniaInput{DocumentoIdentidadSecretario: documento, ProgramaAcademicoID: programaID})
+	result, err := c.Service.EstudiantesPrograma(c.requestContext(), &services.EstudiantesProgramaCeremoniaInput{PeriodoID: periodoQuery(c.GetString("periodo_id")), DocumentoIdentidadSecretario: documento, ProgramaAcademicoID: programaID})
 	if err != nil {
 		c.writeError(mapServiceError(err), err)
 		return
@@ -336,3 +327,5 @@ func (c *CeremoniaController) FirmarMasivamente() {
 	}
 	c.writeFirmaMasiva(result)
 }
+
+func periodoQuery(raw string) int64 { id, _ := strconv.ParseInt(raw, 10, 64); return id }

@@ -131,7 +131,7 @@ func (s FirmaFirmanteService) SubirFirma(ctx context.Context, input *SubirFirmaF
 	var documentoResponse interface{}
 	status, err := request.PostWithContext(
 		ctx,
-		documentosCrudGestorDocumentalURL(),
+		documentosCrudURL(),
 		documentoPayload,
 		&documentoResponse,
 	)

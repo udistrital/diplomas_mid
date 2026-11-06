@@ -29,7 +29,7 @@ func (c *FirmaDiplomaController) Firmar() {
 		return
 	}
 
-	result, err := c.Service.Firmar(c.Ctx.Request.Context(), documentoID, payload)
+	result, err := c.Service.Firmar(c.requestContext(), documentoID, payload)
 	if err != nil {
 		c.writeError(mapServiceError(err), err)
 		return

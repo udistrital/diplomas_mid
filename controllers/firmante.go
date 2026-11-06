@@ -23,7 +23,7 @@ func (c *FirmanteController) RolActivo() {
 		return
 	}
 
-	result, err := c.Service.ConsultarRolActivo(c.Ctx.Request.Context(), documento, time.Now())
+	result, err := c.Service.ConsultarRolActivo(c.requestContext(), documento, time.Now())
 	if err != nil {
 		c.writeError(mapServiceError(err), err)
 		return
