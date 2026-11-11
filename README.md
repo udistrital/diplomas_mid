@@ -11,11 +11,11 @@ API MID para la gestión y generación de diplomas digitales de la Universidad D
 
 ## Variables de entorno
 
-Configurar las variables definidas en [conf/app.conf](conf/app.conf) mediante el entorno o un archivo `.env` local.
+Configurar las variables definidas en [conf/app.conf](conf/app.conf) mediante el entorno. Docker Compose también puede leerlas desde un archivo `.env` local. El puerto debe coincidir con el asignado por infraestructura.
 
 ```shell
-DIPLOMAS_MID_HTTP_PORT=8090
-DIPLOMAS_MID_RUNMODE=dev
+export DIPLOMAS_MID_HTTP_PORT="PUERTO_ASIGNADO"
+export DIPLOMAS_MID_RUNMODE=dev
 ```
 
 También se requieren las URLs de los servicios consumidos y la configuración AWS/S3 para las operaciones correspondientes. No versionar credenciales.
