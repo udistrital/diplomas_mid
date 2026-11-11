@@ -261,11 +261,13 @@ type firmaDocumentoResponse struct {
 }
 
 type ListarCeremoniasInput struct {
+	PeriodoID                    int64 `json:"periodo_id"`
 	DocumentoIdentidadSecretario int64 `json:"documento_identidad_secretario"`
 	DocumentoIdentidadFirmante   int64 `json:"documento_identidad_firmante,omitempty"`
 }
 
 type ActualizarCeremoniaInput struct {
+	PeriodoID                     int64  `json:"periodo_id"`
 	FechaCeremonia                string `json:"fecha_ceremonia"`
 	Lugar                         string `json:"lugar"`
 	CantidadEstudiantesProgramada int    `json:"cantidad_estudiantes_programada"`
@@ -278,6 +280,7 @@ type EliminarCeremoniaInput struct {
 }
 
 type CeremoniaResumen struct {
+	PeriodoID                     int64  `json:"periodo_id"`
 	ID                            int64  `json:"id"`
 	RelacionID                    int64  `json:"relacion_id"`
 	FacultadID                    int64  `json:"facultad_id"`
@@ -295,6 +298,7 @@ type CeremoniaResumen struct {
 }
 
 type ProgramaAprobadoResumen struct {
+	PeriodoID           int64  `json:"periodo_id"`
 	ProgramaAcademicoID int64  `json:"programa_academico_id"`
 	Nombre              string `json:"nombre"`
 	Cantidad            int    `json:"cantidad"`
@@ -371,6 +375,7 @@ type FirmaMasivaCeremoniaResult struct {
 }
 
 type AsignarEstudiantesCeremoniaInput struct {
+	PeriodoID                    int64                          `json:"periodo_id"`
 	DocumentoIdentidadSecretario int64                          `json:"documento_identidad_secretario"`
 	Programas                    []AsignarProgramaCeremoniaItem `json:"programas"`
 }
@@ -390,6 +395,7 @@ type AsignarEstudiantesCeremoniaResult struct {
 type ceremoniaEstudianteCRUDRequest struct {
 	CeremoniaFacultadPrograma ceremoniaFacultadProgramaRef `json:"ceremonia_facultad_programa"`
 	DocumentoDigital          documentoDigitalRef          `json:"documento_digital"`
+	FechaCreacion             string                       `json:"fecha_creacion,omitempty"`
 	Activo                    bool                         `json:"activo"`
 }
 
@@ -405,6 +411,7 @@ type ceremoniaEstudianteCRUDResponse struct {
 	ID                        int64                                  `json:"id"`
 	CeremoniaFacultadPrograma *ceremoniaFacultadProgramaCRUDResponse `json:"ceremonia_facultad_programa,omitempty"`
 	DocumentoDigital          *documentoDigitalResponse              `json:"documento_digital,omitempty"`
+	FechaCreacion             string                                 `json:"fecha_creacion,omitempty"`
 	Activo                    bool                                   `json:"activo"`
 }
 
@@ -414,6 +421,7 @@ type QuitarProgramaCeremoniaInput struct {
 }
 
 type EstudiantesProgramaCeremoniaInput struct {
+	PeriodoID                    int64 `json:"periodo_id"`
 	DocumentoIdentidadSecretario int64 `json:"documento_identidad_secretario"`
 	ProgramaAcademicoID          int64 `json:"programa_academico_id"`
 }
@@ -426,6 +434,7 @@ type EstudiantesProgramaCeremoniaResult struct {
 }
 
 type CrearCeremoniaInput struct {
+	PeriodoID                     int64  `json:"periodo_id"`
 	FechaCeremonia                string `json:"fecha_ceremonia"`
 	Lugar                         string `json:"lugar"`
 	CantidadEstudiantesProgramada int    `json:"cantidad_estudiantes_programada"`
@@ -441,6 +450,7 @@ type CrearCeremoniaResult struct {
 }
 
 type ceremoniaGradoCRUDRequest struct {
+	PeriodoID                     int64  `json:"periodo_id"`
 	FechaCeremonia                string `json:"fecha_ceremonia"`
 	Lugar                         string `json:"lugar"`
 	CantidadEstudiantesProgramada int    `json:"cantidad_estudiantes_programada"`
@@ -449,6 +459,7 @@ type ceremoniaGradoCRUDRequest struct {
 }
 
 type ceremoniaGradoCRUDResponse struct {
+	PeriodoID                     int64  `json:"periodo_id"`
 	ID                            int64  `json:"id"`
 	FechaCeremonia                string `json:"fecha_ceremonia"`
 	Lugar                         string `json:"lugar"`

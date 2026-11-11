@@ -38,20 +38,20 @@ func administrativaAmazonAPIURL() string {
 	return configString("AdministrativaAmazonAPIURL", "ADMINISTRATIVA_AMAZON_API_URL")
 }
 
-func documentosCrudGestorDocumentalURL() string {
-	return configEndpoint("DocumentosCrudGestorDocumentalURL", "DOCUMENTOS_CRUD_GESTOR_DOCUMENTAL_URL", "/v1/gestor_documental")
+func documentosCrudURL() string {
+	return configEndpoint("DocumentosCrudURL", "DOCUMENTOS_CRUD_URL", "/v1/gestor_documental")
 }
 
-func gestorDocumentalDocumentURL() string {
-	return configEndpoint("GestorDocumentalDocumentURL", "GESTOR_DOCUMENTAL_DOCUMENT_URL", "/v1/document")
+func gestorDocumentalURL() string {
+	return configEndpoint("GestorDocumentalURL", "GESTOR_DOCUMENTAL_URL", "/v1/document")
 }
 
-func pazYSalvosCrudURL() string {
-	return configString("PazYSalvosCrudURL", "PAZ_Y_SALVOS_CRUD_URL")
-}
-
-func pazYSalvosAprobadosQuery() string {
-	return "Orc:true"
+func pazYSalvosMidURL() string {
+	base := configString("PazYSalvosMidURL", "PAZ_Y_SALVOS_MID_URL")
+	if base == "" {
+		return ""
+	}
+	return strings.TrimSuffix(base, "/v1") + "/v1"
 }
 
 func academicaCoreServiceURL() string {
@@ -59,7 +59,7 @@ func academicaCoreServiceURL() string {
 }
 
 func parametrosCrudURL() string {
-	return configEndpoint("ParametrosCrudURL", "PARAMETROS_CRUD_URL", "/v1")
+	return strings.TrimSuffix(configString("ParametrosCrudURL", "PARAMETROS_CRUD_URL"), "/v1") + "/v1"
 }
 
 func academicaPruebasAPIURL() string {

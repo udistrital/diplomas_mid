@@ -22,8 +22,8 @@ type programasAprobadosCacheEntry struct {
 
 var programasAprobadosCache = struct {
 	sync.RWMutex
-	items map[int64]programasAprobadosCacheEntry
-}{items: map[int64]programasAprobadosCacheEntry{}}
+	items map[[2]int64]programasAprobadosCacheEntry
+}{items: map[[2]int64]programasAprobadosCacheEntry{}}
 
 func (s CeremoniaService) Crear(ctx context.Context, input *CrearCeremoniaInput) (*CrearCeremoniaResult, error) {
 	if err := validarCeremonia(input); err != nil {
@@ -35,8 +35,13 @@ func (s CeremoniaService) Crear(ctx context.Context, input *CrearCeremoniaInput)
 		return nil, err
 	}
 
+	if _, err := obtenerPeriodoAcademico(ctx, input.PeriodoID); err != nil {
+		return nil, err
+	}
+
 	fechaCeremonia, _ := time.Parse("2006-01-02", input.FechaCeremonia)
 	ceremoniaPayload := ceremoniaGradoCRUDRequest{
+		PeriodoID:                     input.PeriodoID,
 		FechaCeremonia:                fechaCeremonia.Format(time.RFC3339),
 		Lugar:                         strings.TrimSpace(input.Lugar),
 		CantidadEstudiantesProgramada: input.CantidadEstudiantesProgramada,
@@ -54,6 +59,11 @@ func (s CeremoniaService) Crear(ctx context.Context, input *CrearCeremoniaInput)
 	}
 	if ceremonia.ID <= 0 {
 		return nil, fmt.Errorf("%w: diplomas_crud ceremonia_grado response missing id", ErrExternalService)
+	}
+
+	if ceremonia.PeriodoID != input.PeriodoID {
+		s.rollbackCeremonia(ctx, ceremonia.ID, nil)
+		return nil, fmt.Errorf("%w: CRUD no persistió periodo_id; desplegar migración de ceremonias", ErrExternalService)
 	}
 
 	cantidad := input.CantidadEstudiantesProgramada
@@ -90,7 +100,7 @@ func (s CeremoniaService) Listar(ctx context.Context, input *ListarCeremoniasInp
 	if err != nil {
 		return nil, err
 	}
-	return s.listarPorFacultad(ctx, secretario.FacultadID, true)
+	return s.listarPorFacultad(ctx, secretario.FacultadID, input.PeriodoID > 0, input.PeriodoID)
 }
 
 func (s CeremoniaService) ObtenerParametrizacionRegistro(ctx context.Context, documentoSecretario int64, vigencia int) (*ParametrizacionRegistroResponse, error) {
@@ -188,12 +198,25 @@ func (s CeremoniaService) ListarDecano(ctx context.Context, input *ListarCeremon
 	return s.listarPorFacultad(ctx, decano.FacultadID, false)
 }
 
-func (s CeremoniaService) listarPorFacultad(ctx context.Context, facultadID int64, incluirProgramas bool) (*TableroCeremoniasResult, error) {
+func (s CeremoniaService) listarPorFacultad(ctx context.Context, facultadID int64, incluirProgramas bool, periodoIDs ...int64) (*TableroCeremoniasResult, error) {
+	var periodoID int64
+	if len(periodoIDs) > 0 {
+		periodoID = periodoIDs[0]
+	}
 	relaciones, err := s.listarRelacionesFacultad(ctx, facultadID)
 	if err != nil {
 		return nil, err
 	}
 
+	if periodoID > 0 {
+		filtradas := make([]ceremoniaFacultadProgramaCRUDResponse, 0)
+		for _, r := range relaciones {
+			if r.CeremoniaGrado != nil && r.CeremoniaGrado.PeriodoID == periodoID {
+				filtradas = append(filtradas, r)
+			}
+		}
+		relaciones = filtradas
+	}
 	result := TableroCeremoniasResult{FacultadID: facultadID, Ceremonias: []CeremoniaResumen{}, AprobadosProgramas: []ProgramaAprobadoResumen{}, PendientesProgramas: []ProgramaAprobadoResumen{}, AsignadosProgramas: []ProgramaAprobadoResumen{}}
 	for _, relacion := range relaciones {
 		if relacion.CeremoniaGrado == nil || !relacion.Activo || !relacion.CeremoniaGrado.Activo {
@@ -213,6 +236,7 @@ func (s CeremoniaService) listarPorFacultad(ctx context.Context, facultadID int6
 		}
 		item := CeremoniaResumen{
 			ID:                            relacion.CeremoniaGrado.ID,
+			PeriodoID:                     relacion.CeremoniaGrado.PeriodoID,
 			RelacionID:                    relacion.ID,
 			FacultadID:                    relacion.FacultadID,
 			FechaCeremonia:                relacion.CeremoniaGrado.FechaCeremonia,
@@ -241,7 +265,10 @@ func (s CeremoniaService) listarPorFacultad(ctx context.Context, facultadID int6
 	}
 	aplicarBloqueosCeremonias(result.Ceremonias, result.AsignadosProgramas)
 	if incluirProgramas {
-		result.AprobadosProgramas, result.AprobadosTotal = programasAprobadosResumen(ctx, facultadID)
+		result.AprobadosProgramas, result.AprobadosTotal, err = programasAprobadosResumen(ctx, facultadID, periodoID)
+		if err != nil {
+			return nil, err
+		}
 		result.PendientesProgramas = programasPendientes(result.AprobadosProgramas, result.AsignadosProgramas)
 	}
 	return &result, nil
@@ -254,10 +281,14 @@ func (s CeremoniaService) Actualizar(ctx context.Context, id int64, input *Actua
 	if input == nil {
 		return nil, fmt.Errorf("%w: request body is required", ErrInvalidInput)
 	}
-	crearInput := &CrearCeremoniaInput{FechaCeremonia: input.FechaCeremonia, Lugar: input.Lugar, CantidadEstudiantesProgramada: input.CantidadEstudiantesProgramada, Observacion: input.Observacion, DocumentoIdentidadSecretario: input.DocumentoIdentidadSecretario}
+	crearInput := &CrearCeremoniaInput{PeriodoID: input.PeriodoID, FechaCeremonia: input.FechaCeremonia, Lugar: input.Lugar, CantidadEstudiantesProgramada: input.CantidadEstudiantesProgramada, Observacion: input.Observacion, DocumentoIdentidadSecretario: input.DocumentoIdentidadSecretario}
 	if err := validarCeremonia(crearInput); err != nil {
 		return nil, err
 	}
+	if _, err := obtenerPeriodoAcademico(ctx, input.PeriodoID); err != nil {
+		return nil, err
+	}
+
 	secretario, err := s.secretarioAcademicoAutorizado(ctx, input.DocumentoIdentidadSecretario)
 	if err != nil {
 		return nil, err
@@ -270,6 +301,10 @@ func (s CeremoniaService) Actualizar(ctx context.Context, id int64, input *Actua
 	if err != nil {
 		return nil, err
 	}
+	if relacion.CeremoniaGrado.PeriodoID != input.PeriodoID && len(asignaciones) > 0 {
+		return nil, fmt.Errorf("%w: no se puede cambiar período con estudiantes asignados", ErrInvalidState)
+	}
+
 	flujo, err := estadoFlujoAsignaciones(ctx, asignaciones)
 	if err != nil {
 		return nil, err
@@ -279,7 +314,7 @@ func (s CeremoniaService) Actualizar(ctx context.Context, id int64, input *Actua
 	}
 
 	fechaCeremonia, _ := time.Parse("2006-01-02", input.FechaCeremonia)
-	payload := ceremoniaGradoCRUDRequest{FechaCeremonia: fechaCeremonia.Format(time.RFC3339), Lugar: strings.TrimSpace(input.Lugar), CantidadEstudiantesProgramada: input.CantidadEstudiantesProgramada, Observacion: strings.TrimSpace(input.Observacion), Activo: true}
+	payload := ceremoniaGradoCRUDRequest{PeriodoID: input.PeriodoID, FechaCeremonia: fechaCeremonia.Format(time.RFC3339), Lugar: strings.TrimSpace(input.Lugar), CantidadEstudiantesProgramada: input.CantidadEstudiantesProgramada, Observacion: strings.TrimSpace(input.Observacion), Activo: true}
 	var ceremonia ceremoniaGradoCRUDResponse
 	status, err := request.PutWithContext(ctx, fmt.Sprintf("%s/ceremonia_grado/%d", diplomasCrudURL(), id), payload, &ceremonia)
 	if err != nil || status < 200 || status >= 300 {
@@ -288,6 +323,10 @@ func (s CeremoniaService) Actualizar(ctx context.Context, id int64, input *Actua
 		}
 		return nil, fmt.Errorf("%w: diplomas_crud ceremonia_grado put returned status %d", ErrExternalService, status)
 	}
+	if ceremonia.PeriodoID != input.PeriodoID {
+		return nil, fmt.Errorf("%w: CRUD no persistió periodo_id de ceremonia", ErrExternalService)
+	}
+
 	cantidad := input.CantidadEstudiantesProgramada
 	relPayload := ceremoniaFacultadProgramaCRUDRequest{CeremoniaGrado: ceremoniaRef{ID: id}, FacultadID: secretario.FacultadID, ProgramaAcademicoID: 0, CantidadEstudiantesProgramada: &cantidad, Activo: true}
 	var relActualizada ceremoniaFacultadProgramaCRUDResponse
@@ -298,7 +337,7 @@ func (s CeremoniaService) Actualizar(ctx context.Context, id int64, input *Actua
 		}
 		return nil, fmt.Errorf("%w: diplomas_crud ceremonia_facultad_programa put returned status %d", ErrExternalService, status)
 	}
-	return &CeremoniaResumen{ID: ceremonia.ID, RelacionID: relacion.ID, FacultadID: secretario.FacultadID, FechaCeremonia: ceremonia.FechaCeremonia, Lugar: ceremonia.Lugar, CantidadEstudiantesProgramada: cantidad, CuposDisponibles: cantidad, Observacion: ceremonia.Observacion, Activo: true}, nil
+	return &CeremoniaResumen{PeriodoID: ceremonia.PeriodoID, ID: ceremonia.ID, RelacionID: relacion.ID, FacultadID: secretario.FacultadID, FechaCeremonia: ceremonia.FechaCeremonia, Lugar: ceremonia.Lugar, CantidadEstudiantesProgramada: cantidad, CuposDisponibles: cantidad, Observacion: ceremonia.Observacion, Activo: true}, nil
 }
 
 func (s CeremoniaService) Eliminar(ctx context.Context, id int64, input *EliminarCeremoniaInput) error {
@@ -355,6 +394,10 @@ func (s CeremoniaService) AsignarEstudiantes(ctx context.Context, ceremoniaID in
 	if err != nil {
 		return nil, err
 	}
+	if err := validarPeriodoAsignacion(relacion.CeremoniaGrado, input.PeriodoID); err != nil {
+		return nil, err
+	}
+
 	programas := programasSeleccionados(input.Programas)
 	if len(programas) == 0 {
 		return nil, fmt.Errorf("%w: debe seleccionar al menos un programa", ErrInvalidInput)
@@ -380,7 +423,7 @@ func (s CeremoniaService) AsignarEstudiantes(ctx context.Context, ceremoniaID in
 	if err != nil {
 		return nil, err
 	}
-	estudiantes, err := consultarEstudiantesAprobadosPorFacultadLigero(ctx, secretario.FacultadID)
+	estudiantes, err := consultarEstudiantesAprobadosPorFacultadLigero(ctx, secretario.FacultadID, input.PeriodoID)
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +436,7 @@ func (s CeremoniaService) AsignarEstudiantes(ctx context.Context, ceremoniaID in
 	}
 	totalSolicitado := 0
 	for programaID := range programas {
-		if yaAsignado, err := programaAsignadoEnFacultad(ctx, secretario.FacultadID, programaID); err != nil {
+		if yaAsignado, err := programaAsignadoEnFacultad(ctx, secretario.FacultadID, programaID, input.PeriodoID); err != nil {
 			return nil, err
 		} else if yaAsignado {
 			return nil, fmt.Errorf("%w: el programa %d ya esta asignado a una ceremonia", ErrInvalidState, programaID)
@@ -402,6 +445,19 @@ func (s CeremoniaService) AsignarEstudiantes(ctx context.Context, ceremoniaID in
 		if cantidad == 0 {
 			return nil, fmt.Errorf("%w: el programa %d no tiene estudiantes pendientes", ErrInvalidInput, programaID)
 		}
+		for _, estudiante := range estudiantesPorPrograma[programaID] {
+			if estudiante.PeriodoID != input.PeriodoID {
+				return nil, fmt.Errorf("%w: estudiante pertenece a otro período", ErrInvalidState)
+			}
+			yaAsignado, err := estudianteAsignadoEnPeriodo(ctx, estudiante.CodigoEstudiante, input.PeriodoID)
+			if err != nil {
+				return nil, err
+			}
+			if yaAsignado {
+				return nil, fmt.Errorf("%w: estudiante %d ya está asignado en período %d", ErrInvalidState, estudiante.CodigoEstudiante, input.PeriodoID)
+			}
+		}
+
 		totalSolicitado += cantidad
 	}
 	if totalSolicitado > disponibles {
@@ -416,6 +472,11 @@ func (s CeremoniaService) AsignarEstudiantes(ctx context.Context, ceremoniaID in
 	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
 	for _, programaID := range ids {
 		for idx, estudiante := range estudiantesPorPrograma[programaID] {
+			if estudiante.PeriodoID != relacion.CeremoniaGrado.PeriodoID {
+				result.Errores++
+				continue
+			}
+
 			estudianteEnriquecido, err := enriquecerEstudianteAprobado(ctx, estudiante)
 			if err == nil {
 				estudiante = estudianteEnriquecido
@@ -434,6 +495,19 @@ func (s CeremoniaService) AsignarEstudiantes(ctx context.Context, ceremoniaID in
 					continue
 				}
 			}
+			if documento.PeriodoID == nil || *documento.PeriodoID != input.PeriodoID {
+				result.Errores++
+				continue
+			}
+
+			fechaCeremonia, err := time.Parse(time.RFC3339, relacion.CeremoniaGrado.FechaCeremonia)
+			if err != nil {
+				return nil, fmt.Errorf("%w: fecha de ceremonia inválida para reservar registro", ErrInvalidState)
+			}
+			if err := asegurarRegistroDiplomaEnFecha(ctx, documento, fechaCeremonia); err != nil {
+				return nil, err
+			}
+
 			creado, err := crearAsignacionCeremoniaEstudiante(ctx, relacion.ID, documento.ID)
 			if err != nil {
 				result.Errores++
@@ -496,7 +570,7 @@ func (s CeremoniaService) EstudiantesPrograma(ctx context.Context, input *Estudi
 	if err != nil {
 		return nil, err
 	}
-	estudiantes, err := consultarEstudiantesAprobadosPorFacultadLigero(ctx, secretario.FacultadID)
+	estudiantes, err := consultarEstudiantesAprobadosPorFacultadLigero(ctx, secretario.FacultadID, input.PeriodoID)
 	if err != nil {
 		return nil, err
 	}
@@ -554,12 +628,15 @@ func listarAsignacionesRelacion(ctx context.Context, relacionID int64) ([]ceremo
 	return asignados, nil
 }
 
-func programaAsignadoEnFacultad(ctx context.Context, facultadID int64, programaID int64) (bool, error) {
+func programaAsignadoEnFacultad(ctx context.Context, facultadID int64, programaID int64, periodoID int64) (bool, error) {
 	relaciones, err := (CeremoniaService{}).listarRelacionesFacultad(ctx, facultadID)
 	if err != nil {
 		return false, err
 	}
 	for _, relacion := range relaciones {
+		if relacion.CeremoniaGrado == nil || relacion.CeremoniaGrado.PeriodoID != periodoID {
+			continue
+		}
 		asignaciones, err := listarAsignacionesRelacion(ctx, relacion.ID)
 		if err != nil {
 			return false, err
@@ -574,24 +651,34 @@ func programaAsignadoEnFacultad(ctx context.Context, facultadID int64, programaI
 }
 
 func crearAsignacionCeremoniaEstudiante(ctx context.Context, relacionID int64, documentoID int64) (bool, error) {
-	query := fmt.Sprintf("ceremonia_facultad_programa_id:%d,documento_digital_id:%d,activo:true", relacionID, documentoID)
+	// La pareja es única incluso después del retiro lógico: consultar también inactivos.
+	query := fmt.Sprintf("ceremonia_facultad_programa_id:%d,documento_digital_id:%d", relacionID, documentoID)
 	endpoint := fmt.Sprintf("%s/ceremonia_estudiante/?query=%s&limit=1", diplomasCrudURL(), url.QueryEscape(query))
 	var existentes []ceremoniaEstudianteCRUDResponse
 	status, err := request.GetWithContext(ctx, endpoint, &existentes)
-	if err != nil {
+	if err != nil || status < 200 || status >= 300 {
 		return false, fmt.Errorf("%w: diplomas_crud ceremonia_estudiante buscar status %d: %v", ErrExternalService, status, err)
 	}
-	if status >= 200 && status < 300 && len(existentes) > 0 {
+	if len(existentes) > 0 && existentes[0].Activo {
 		return false, nil
 	}
 	payload := ceremoniaEstudianteCRUDRequest{CeremoniaFacultadPrograma: ceremoniaFacultadProgramaRef{ID: relacionID}, DocumentoDigital: documentoDigitalRef{ID: documentoID}, Activo: true}
 	var response ceremoniaEstudianteCRUDResponse
-	status, err = request.PostWithContext(ctx, diplomasCrudURL()+"/ceremonia_estudiante/", payload, &response)
-	if err != nil {
-		return false, fmt.Errorf("%w: diplomas_crud ceremonia_estudiante post status %d: %v", ErrExternalService, status, err)
+	if len(existentes) > 0 {
+		existente := existentes[0]
+		if existente.ID <= 0 {
+			return false, fmt.Errorf("%w: asignación existente sin identificador", ErrExternalService)
+		}
+		payload.FechaCreacion = existente.FechaCreacion
+		status, err = request.PutWithContext(ctx, fmt.Sprintf("%s/ceremonia_estudiante/%d", diplomasCrudURL(), existente.ID), payload, &response)
+	} else {
+		status, err = request.PostWithContext(ctx, diplomasCrudURL()+"/ceremonia_estudiante/", payload, &response)
 	}
-	if status < 200 || status >= 300 {
-		return false, fmt.Errorf("%w: diplomas_crud ceremonia_estudiante post returned status %d", ErrExternalService, status)
+	if err != nil || status < 200 || status >= 300 {
+		return false, fmt.Errorf("%w: diplomas_crud ceremonia_estudiante guardar status %d: %v", ErrExternalService, status, err)
+	}
+	if response.ID <= 0 {
+		return false, fmt.Errorf("%w: asignación guardada sin identificador", ErrExternalService)
 	}
 	return true, nil
 }
@@ -674,38 +761,26 @@ func (s CeremoniaService) relacionCeremoniaAutorizada(ctx context.Context, cerem
 	return nil, fmt.Errorf("%w: ceremonia no pertenece a la facultad del firmante", ErrNoActiveRole)
 }
 
-func consultarEstudiantesAprobadosPorFacultadLigero(ctx context.Context, facultadID int64) ([]EstudianteAprobadoGrado, error) {
-	query := pazYSalvosAprobadosQuery()
-	if facultadID > 0 {
-		query = fmt.Sprintf("%s,IdFacultadOikos:%d", query, facultadID)
-	}
-	endpoint := fmt.Sprintf(
-		"%s/v1/semaforo?query=%s&limit=-1",
-		pazYSalvosCrudURL(),
-		url.QueryEscape(query),
-	)
-	var response pazYSalvosSemaforoResponse
-	status, err := request.GetWithContext(ctx, endpoint, &response)
+func consultarEstudiantesAprobadosPorFacultadLigero(ctx context.Context, facultadID int64, periodoID int64) ([]EstudianteAprobadoGrado, error) {
+	estudiantes, err := consultarAprobadosMID(ctx, periodoID)
 	if err != nil {
-		return nil, fmt.Errorf("%w: paz_y_salvos_crud semaforo status %d: %v", ErrExternalService, status, err)
+		return nil, err
 	}
-	if status < 200 || status >= 300 {
-		return nil, fmt.Errorf("%w: paz_y_salvos_crud semaforo returned status %d", ErrExternalService, status)
-	}
-	return response.Data, nil
+	return filtrarEstudiantesAprobados(estudiantes, ListarAprobadosPorFacultadInput{FacultadID: facultadID}), nil
 }
 
-func programasAprobadosResumen(ctx context.Context, facultadID int64) ([]ProgramaAprobadoResumen, int) {
+func programasAprobadosResumen(ctx context.Context, facultadID, periodoID int64) ([]ProgramaAprobadoResumen, int, error) {
+	key := [2]int64{periodoID, facultadID}
 	programasAprobadosCache.RLock()
-	entry, ok := programasAprobadosCache.items[facultadID]
+	entry, ok := programasAprobadosCache.items[key]
 	programasAprobadosCache.RUnlock()
 	if ok && time.Now().Before(entry.expira) {
-		return entry.programas, entry.total
+		return entry.programas, entry.total, nil
 	}
 
-	estudiantes, err := consultarEstudiantesAprobadosPorFacultadLigero(ctx, facultadID)
+	estudiantes, err := consultarEstudiantesAprobadosPorFacultadLigero(ctx, facultadID, periodoID)
 	if err != nil {
-		return []ProgramaAprobadoResumen{}, 0
+		return nil, 0, err
 	}
 	conteo := map[int64]int{}
 	total := 0
@@ -727,12 +802,12 @@ func programasAprobadosResumen(ctx context.Context, facultadID int64) ([]Program
 		if nombre == "" {
 			nombre = nombreProgramaFallback(id)
 		}
-		programas = append(programas, ProgramaAprobadoResumen{ProgramaAcademicoID: id, Nombre: nombre, Cantidad: conteo[id]})
+		programas = append(programas, ProgramaAprobadoResumen{PeriodoID: periodoID, ProgramaAcademicoID: id, Nombre: nombre, Cantidad: conteo[id]})
 	}
 	programasAprobadosCache.Lock()
-	programasAprobadosCache.items[facultadID] = programasAprobadosCacheEntry{programas: programas, total: total, expira: time.Now().Add(5 * time.Minute)}
+	programasAprobadosCache.items[key] = programasAprobadosCacheEntry{programas: programas, total: total, expira: time.Now().Add(5 * time.Minute)}
 	programasAprobadosCache.Unlock()
-	return programas, total
+	return programas, total, nil
 }
 
 type estadoFlujoPrograma struct {
@@ -809,7 +884,7 @@ func aplicarBloqueosCeremonias(ceremonias []CeremoniaResumen, programas []Progra
 }
 
 func programasAsignadosResumen(ctx context.Context, relaciones []ceremoniaFacultadProgramaCRUDResponse) ([]ProgramaAprobadoResumen, error) {
-	porPrograma := map[int64]*ProgramaAprobadoResumen{}
+	porPrograma := map[[2]int64]*ProgramaAprobadoResumen{}
 	for _, relacion := range relaciones {
 		if relacion.CeremoniaGrado == nil || !relacion.Activo || !relacion.CeremoniaGrado.Activo {
 			continue
@@ -823,13 +898,14 @@ func programasAsignadosResumen(ctx context.Context, relaciones []ceremoniaFacult
 				continue
 			}
 			programaID := *asignacion.DocumentoDigital.ProgramaAcademicoID
-			item := porPrograma[programaID]
+			key := [2]int64{relacion.CeremoniaGrado.ID, programaID}
+			item := porPrograma[key]
 			if item == nil {
-				item = &ProgramaAprobadoResumen{ProgramaAcademicoID: programaID, Nombre: nombreDependenciaOikos(ctx, programaID), CeremoniaID: relacion.CeremoniaGrado.ID, RelacionID: relacion.ID, Lugar: relacion.CeremoniaGrado.Lugar, FechaCeremonia: relacion.CeremoniaGrado.FechaCeremonia}
+				item = &ProgramaAprobadoResumen{PeriodoID: relacion.CeremoniaGrado.PeriodoID, ProgramaAcademicoID: programaID, Nombre: nombreDependenciaOikos(ctx, programaID), CeremoniaID: relacion.CeremoniaGrado.ID, RelacionID: relacion.ID, Lugar: relacion.CeremoniaGrado.Lugar, FechaCeremonia: relacion.CeremoniaGrado.FechaCeremonia}
 				if item.Nombre == "" {
 					item.Nombre = nombreProgramaFallback(programaID)
 				}
-				porPrograma[programaID] = item
+				porPrograma[key] = item
 			}
 			item.Cantidad++
 		}
@@ -847,26 +923,27 @@ func programasAsignadosResumen(ctx context.Context, relaciones []ceremoniaFacult
 		item.PuedeReasignar = !flujo.Bloqueado
 		item.MotivoBloqueo = flujo.MotivoBloqueo
 	}
-	ids := make([]int64, 0, len(porPrograma))
-	for id := range porPrograma {
-		ids = append(ids, id)
+	result := make([]ProgramaAprobadoResumen, 0, len(porPrograma))
+	for _, item := range porPrograma {
+		result = append(result, *item)
 	}
-	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
-	result := make([]ProgramaAprobadoResumen, 0, len(ids))
-	for _, id := range ids {
-		result = append(result, *porPrograma[id])
-	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].CeremoniaID != result[j].CeremoniaID {
+			return result[i].CeremoniaID < result[j].CeremoniaID
+		}
+		return result[i].ProgramaAcademicoID < result[j].ProgramaAcademicoID
+	})
 	return result, nil
 }
 
 func programasPendientes(aprobados []ProgramaAprobadoResumen, asignados []ProgramaAprobadoResumen) []ProgramaAprobadoResumen {
-	asignadosMap := map[int64]struct{}{}
+	asignadosMap := map[[2]int64]struct{}{}
 	for _, item := range asignados {
-		asignadosMap[item.ProgramaAcademicoID] = struct{}{}
+		asignadosMap[[2]int64{item.PeriodoID, item.ProgramaAcademicoID}] = struct{}{}
 	}
 	pendientes := make([]ProgramaAprobadoResumen, 0, len(aprobados))
 	for _, item := range aprobados {
-		if _, ok := asignadosMap[item.ProgramaAcademicoID]; ok {
+		if _, ok := asignadosMap[[2]int64{item.PeriodoID, item.ProgramaAcademicoID}]; ok {
 			continue
 		}
 		pendientes = append(pendientes, item)
@@ -887,6 +964,10 @@ func validarCeremonia(input *CrearCeremoniaInput) error {
 	if input == nil {
 		return fmt.Errorf("%w: request body is required", ErrInvalidInput)
 	}
+	if input.PeriodoID <= 0 {
+		return fmt.Errorf("%w: periodo_id es obligatorio para configurar ceremonia", ErrInvalidInput)
+	}
+
 	if input.DocumentoIdentidadSecretario <= 0 {
 		return fmt.Errorf("%w: documento_identidad_secretario is required", ErrInvalidInput)
 	}
@@ -910,4 +991,24 @@ func catalogoEndpoint(base string, path string, query string) string {
 		return base + path
 	}
 	return fmt.Sprintf("%s%s?query=%s", base, path, url.QueryEscape(query))
+}
+
+func validarPeriodoAsignacion(ceremonia *ceremoniaGradoCRUDResponse, periodoID int64) error {
+	if ceremonia == nil || ceremonia.PeriodoID <= 0 {
+		return fmt.Errorf("%w: configure el período de la ceremonia antes de asignar", ErrInvalidState)
+	}
+	if periodoID <= 0 || periodoID != ceremonia.PeriodoID {
+		return fmt.Errorf("%w: período solicitado no coincide con ceremonia", ErrInvalidInput)
+	}
+	return nil
+}
+
+func estudianteAsignadoEnPeriodo(ctx context.Context, codigo, periodoID int64) (bool, error) {
+	endpoint := diplomasCrudURL() + "/ceremonia_estudiante/?query=" + url.QueryEscape(fmt.Sprintf("codigo_estudiante:%d,periodo_id:%d,activo:true", codigo, periodoID)) + "&limit=-1"
+	var asignaciones []ceremoniaEstudianteCRUDResponse
+	status, err := request.GetWithContext(ctx, endpoint, &asignaciones)
+	if err != nil || status < 200 || status >= 300 {
+		return false, fmt.Errorf("%w: verificar estudiante/período asignado status %d: %v", ErrExternalService, status, err)
+	}
+	return len(asignaciones) > 0, nil
 }

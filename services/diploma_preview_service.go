@@ -1181,3 +1181,25 @@ func valorInt64(value int64) string {
 	}
 	return strconv.FormatInt(value, 10)
 }
+
+// Preparar solo permite reservar números para documentos de la facultad autorizada.
+func (s DiplomaPreviewService) Preparar(ctx context.Context, documentoID, documentoSecretario int64) (*DiplomaPreviewResult, error) {
+	if documentoID <= 0 || documentoSecretario <= 0 {
+		return nil, fmt.Errorf("%w: documento y secretario son obligatorios", ErrInvalidInput)
+	}
+	secretario, err := (CeremoniaService{}).secretarioAcademicoAutorizado(ctx, documentoSecretario)
+	if err != nil {
+		return nil, err
+	}
+	documento, err := consultarDocumentoDigital(ctx, documentoID)
+	if err != nil {
+		return nil, err
+	}
+	if documento.FacultadID == nil || *documento.FacultadID != secretario.FacultadID {
+		return nil, ErrNoActiveRole
+	}
+	if err := asegurarRegistroDiploma(ctx, documentoID); err != nil {
+		return nil, err
+	}
+	return s.Generar(ctx, documentoID)
+}

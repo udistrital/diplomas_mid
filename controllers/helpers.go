@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -26,6 +27,9 @@ func (c *APIController) writeJSON(status int, payload interface{}) {
 
 func (c *APIController) writeError(status int, err error) {
 	message := "internal server error"
+	if status == http.StatusGatewayTimeout {
+		message = "Un servicio requerido no respondió a tiempo. Intente nuevamente."
+	}
 	if err != nil && status < http.StatusInternalServerError {
 		message = err.Error()
 	}
@@ -57,7 +61,18 @@ func mapServiceError(err error) int {
 		return http.StatusForbidden
 	}
 	if errors.Is(err, services.ErrExternalService) {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return http.StatusGatewayTimeout
+		}
 		return http.StatusBadGateway
 	}
 	return http.StatusInternalServerError
+}
+
+func (c *APIController) requestContext() context.Context {
+	ctx := c.Ctx.Request.Context()
+	if token := c.Ctx.Request.Header.Get("Authorization"); token != "" {
+		ctx = context.WithValue(ctx, "Authorization", token)
+	}
+	return ctx
 }

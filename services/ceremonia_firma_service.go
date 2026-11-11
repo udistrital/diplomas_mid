@@ -417,6 +417,7 @@ func construirCeremoniaFirmasResult(ctx context.Context, relacion *ceremoniaFacu
 	}
 	resumen := CeremoniaResumen{
 		ID:                            relacion.CeremoniaGrado.ID,
+		PeriodoID:                     relacion.CeremoniaGrado.PeriodoID,
 		RelacionID:                    relacion.ID,
 		FacultadID:                    relacion.FacultadID,
 		FechaCeremonia:                relacion.CeremoniaGrado.FechaCeremonia,

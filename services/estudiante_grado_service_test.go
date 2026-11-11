@@ -35,7 +35,8 @@ func TestEstudianteAprobadoGradoDocumentoDigitalRequest(t *testing.T) {
 		CodigoEstudiante: 10000000001,
 		IDProyectoOikos:  73,
 		AnioInsGrado:     2025,
-		PerInsGrado:      1,
+		PerInsGrado:      3,
+		PeriodoID:        77,
 	}
 
 	result := estudiante.DocumentoDigitalRequest(38, 1)
@@ -52,8 +53,8 @@ func TestEstudianteAprobadoGradoDocumentoDigitalRequest(t *testing.T) {
 	if result.Vigencia != 2025 {
 		t.Fatalf("expected vigencia from AnioInsGrado, got %d", result.Vigencia)
 	}
-	if result.PeriodoID != 1 {
-		t.Fatalf("expected periodo_id from PerInsGrado, got %d", result.PeriodoID)
+	if result.PeriodoID != 77 {
+		t.Fatalf("expected real periodo_id, got %d", result.PeriodoID)
 	}
 	if !result.Activo {
 		t.Fatal("expected activo true")

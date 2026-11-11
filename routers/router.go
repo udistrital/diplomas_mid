@@ -9,11 +9,12 @@ import (
 func init() {
 	api := beego.NewNamespace("/v1",
 		beego.NSNamespace("/documento_digital",
-			beego.NSRouter("/:id/diploma/preview", &controllers.DiplomaPreviewController{}, "get:Generar"),
+			beego.NSRouter("/:id/diploma/preview", &controllers.DiplomaPreviewController{}, "get:Generar;post:Preparar"),
 			beego.NSRouter("/:id/firmar", &controllers.FirmaDiplomaController{}, "post:Firmar"),
 			beego.NSRouter("/:id/firma", &controllers.FirmaDiplomaController{}, "delete:Anular"),
 		),
 		beego.NSNamespace("/diplomas",
+			beego.NSRouter("/periodos-academicos", &controllers.EstudianteGradoController{}, "get:PeriodosAcademicos"),
 			beego.NSRouter("/estudiantes-aprobados", &controllers.EstudianteGradoController{}, "get:AprobadosPorFacultad"),
 			beego.NSRouter("/estudiantes-aprobados/documentos", &controllers.EstudianteGradoController{}, "post:CrearDocumentosAprobados"),
 			beego.NSRouter("/registro-control/archivo", &controllers.DiplomasZIPController{}, "get:Descargar"),

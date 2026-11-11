@@ -36,6 +36,9 @@ func (s FirmaDiplomaService) Firmar(ctx context.Context, documentoID int64, inpu
 	if err := validarFlujoFirmaDocumento(ctx, documentoID, firmanteActivo); err != nil {
 		return nil, err
 	}
+	if err := asegurarRegistroDiploma(ctx, documentoID); err != nil {
+		return nil, err
+	}
 	preview := firmanteActivo.Orden < 4
 	if preview {
 		firmaDocumento, err := registrarFirmaDocumentoDiploma(ctx, documentoID, firmanteActivo)
@@ -55,10 +58,6 @@ func (s FirmaDiplomaService) Firmar(ctx context.Context, documentoID int64, inpu
 			FirmaDocumento:   firmaDocumento,
 			File:             previewDocumento.File,
 		}, nil
-	}
-
-	if err := asegurarRegistroDiplomaParaFirmaFinal(ctx, documentoID); err != nil {
-		return nil, err
 	}
 
 	previewDocumento, err := generarDiplomaPreview(ctx, documentoID, firmanteActivo)
@@ -256,21 +255,27 @@ func validarRubricaFirmante(ctx context.Context, firmante *FirmanteActivo) error
 	return nil
 }
 
-func asegurarRegistroDiplomaParaFirmaFinal(ctx context.Context, documentoID int64) error {
+func asegurarRegistroDiploma(ctx context.Context, documentoID int64) error {
 	documento, err := consultarDocumentoDigital(ctx, documentoID)
 	if err != nil {
 		return err
 	}
 
+	fechaGrado, err := fechaCeremoniaDocumento(ctx, documentoID)
+	if err != nil {
+		return err
+	}
+	return asegurarRegistroDiplomaEnFecha(ctx, documento, fechaGrado)
+}
+
+// Idempotente: reutiliza el diploma y el registro ya reservado.
+func asegurarRegistroDiplomaEnFecha(ctx context.Context, documento *documentoDigitalResponse, fechaGrado time.Time) error {
+	documentoID := documento.ID
 	diploma, err := buscarDiplomaDigitalExistente(ctx, documentoID)
 	if err != nil {
 		return err
 	}
 	if diploma == nil {
-		fechaGrado, err := fechaCeremoniaDocumento(ctx, documentoID)
-		if err != nil {
-			return err
-		}
 		payload, err := construirDiplomaFinalRequest(ctx, documento, fechaGrado)
 		if err != nil {
 			return err
@@ -549,9 +554,9 @@ func consultarFirmaGraficaFirmante(ctx context.Context, documentoIdentidad int64
 		return "", fmt.Errorf("%w: el firmante no tiene firma registrada", ErrInvalidState)
 	}
 
-	baseURL := gestorDocumentalDocumentURL()
+	baseURL := gestorDocumentalURL()
 	if baseURL == "" {
-		return "", fmt.Errorf("%w: GestorDocumentalDocumentURL is required", ErrInvalidInput)
+		return "", fmt.Errorf("%w: GestorDocumentalURL is required", ErrInvalidInput)
 	}
 	endpoint := fmt.Sprintf("%s/%s", baseURL, url.PathEscape(firmaFirmante.EnlaceFirma))
 

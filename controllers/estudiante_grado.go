@@ -17,7 +17,7 @@ func (c *EstudianteGradoController) URLMapping() {}
 
 func (c *EstudianteGradoController) AprobadosPorFacultad() {
 	input := listarAprobadosInputFromQuery(c)
-	result, err := c.Service.ListarAprobadosPorFacultad(c.Ctx.Request.Context(), &input)
+	result, err := c.Service.ListarAprobadosPorFacultad(c.requestContext(), &input)
 	if err != nil {
 		c.writeError(mapServiceError(err), err)
 		return
@@ -33,7 +33,7 @@ func (c *EstudianteGradoController) CrearDocumentosAprobados() {
 		return
 	}
 
-	result, err := c.Service.CrearDocumentosAprobados(c.Ctx.Request.Context(), payload)
+	result, err := c.Service.CrearDocumentosAprobados(c.requestContext(), payload)
 	if err != nil {
 		c.writeError(mapServiceError(err), err)
 		return
@@ -51,6 +51,7 @@ func (c *EstudianteGradoController) CrearDocumentosAprobados() {
 
 func listarAprobadosInputFromQuery(c *EstudianteGradoController) services.ListarAprobadosPorFacultadInput {
 	return services.ListarAprobadosPorFacultadInput{
+		PeriodoID:                  queryInt64(c, "periodo_id"),
 		TipoDocumentoDigitalID:     queryInt64(c, "tipo_documento_digital_id"),
 		TipoDocumentoDigitalCodigo: strings.TrimSpace(c.GetString("tipo_documento_digital_codigo")),
 		CodigoEstudiante:           queryInt64(c, "codigo_estudiante"),
@@ -82,4 +83,13 @@ func queryInt64List(raw string) []int64 {
 		}
 	}
 	return values
+}
+
+func (c *EstudianteGradoController) PeriodosAcademicos() {
+	result, err := services.ListarPeriodosAcademicos(c.requestContext())
+	if err != nil {
+		c.writeError(mapServiceError(err), err)
+		return
+	}
+	c.writeJSON(http.StatusOK, result)
 }
