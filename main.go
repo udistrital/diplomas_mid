@@ -2,49 +2,50 @@ package main
 
 import (
 	"os"
-	"strings"
 
 	"github.com/beego/beego/v2/core/logs"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/beego/v2/server/web/filter/cors"
 	_ "github.com/udistrital/diplomas_mid/routers"
 	"github.com/udistrital/diplomas_mid/services"
+	apistatus "github.com/udistrital/utils_oas/v2/apiStatusLib"
+	"github.com/udistrital/utils_oas/v2/auditoria"
+	customerrorv2 "github.com/udistrital/utils_oas/v2/customerror"
+	"github.com/udistrital/utils_oas/v2/security"
+	"github.com/udistrital/utils_oas/v2/xray"
 )
 
 func main() {
 	if err := services.LoadRuntimeConfig(); err != nil {
 		logs.Error("error cargando configuracion: %v", err)
-		return
+		os.Exit(1)
 	}
 
-	allowedOrigins := strings.TrimSpace(os.Getenv("DIPLOMAS_CORS_ALLOWED_ORIGINS"))
-	if allowedOrigins == "" {
-		allowedOrigins, _ = beego.AppConfig.String("CORSAllowedOrigins")
-	}
-	if filter := configuredCORSFilter(allowedOrigins); filter != nil {
-		beego.InsertFilter("/v1/*", beego.BeforeRouter, filter)
-	}
+	beego.InsertFilter("*", beego.BeforeRouter, configuredCORSFilter())
 
+	initializeOASMiddleware()
 	beego.Run()
 }
 
-// Empty configuration keeps CORS disabled; deployments choose their own origins.
-func configuredCORSFilter(raw string) beego.FilterFunc {
-	if strings.HasPrefix(strings.TrimSpace(raw), "${") {
-		return nil
-	}
-	origins := make([]string, 0)
-	for _, value := range strings.Split(raw, ",") {
-		if origin := strings.TrimSpace(value); origin != "" {
-			origins = append(origins, origin)
-		}
-	}
-	if len(origins) == 0 {
-		return nil
+func initializeOASMiddleware() {
+	apistatus.Init()
+	auditoria.InitMiddleware()
+	security.SetSecurityHeaders()
+	xray.Init()
+	beego.ErrorController(&customerrorv2.CustomErrorController{})
+}
+
+// Keep the institutional CORS policy in one place for startup and HTTP tests.
+func configuredCORSFilter() beego.FilterFunc {
+	allowedOrigins := []string{"*.udistrital.edu.co"}
+	if beego.BConfig.RunMode == beego.DEV {
+		allowedOrigins = []string{"*"}
 	}
 	return cors.Allow(&cors.Options{
-		AllowOrigins: origins,
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders: []string{"Origin", "Accept", "Content-Type", "Authorization"},
+		AllowOrigins:     allowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Accept", "Content-Type", "Authorization", "User-Agent", "X-Amzn-Trace-Id"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Disposition"},
+		AllowCredentials: true,
 	})
 }
