@@ -1,0 +1,9 @@
+**
+!Dockerfile
+!main
+!conf/
+!conf/app.conf
+!assets/
+!assets/**
+!runtime/
+!runtime/**

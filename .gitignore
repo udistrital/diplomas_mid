@@ -39,3 +39,4 @@ swagger/**
 
 # Dependencias de Chromium preparadas para Docker
 runtime/
+.serena/
