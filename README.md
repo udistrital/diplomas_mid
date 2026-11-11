@@ -1,4 +1,4 @@
-# diplomas_service
+# diplomas_mid
 
 API MID para la gestión y generación de diplomas digitales de la Universidad Distrital Francisco José de Caldas.
 
@@ -23,8 +23,8 @@ También se requieren las URLs de los servicios consumidos y la configuración A
 ## Ejecución del proyecto
 
 ```shell
-git clone -b develop https://github.com/udistrital/diplomas_service.git
-cd diplomas_service
+git clone -b develop https://github.com/udistrital/diplomas_mid.git
+cd diplomas_mid
 # Configurar las variables de entorno antes de iniciar.
 go run .
 ```
