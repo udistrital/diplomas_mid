@@ -1,6 +1,9 @@
+name: diplomas_mid
+
 services:
   diplomas_mid:
-    container_name: diplomas-mid-local
+    container_name: diplomas_mid
+    image: diplomas_mid:local
     build:
       context: .
     environment:
