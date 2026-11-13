@@ -1,0 +1,2532 @@
+swagger: '2.0'
+info:
+  title: diplomas_mid
+  description: API MID para gestión, generación y firma de diplomas digitales de la
+    Universidad Distrital Francisco José de Caldas. Las respuestas JSON se entregan
+    directamente, sin sobre de respuesta.
+  version: 1.0.0
+basePath: /v1
+consumes:
+- application/json
+produces:
+- application/json
+securityDefinitions:
+  Bearer:
+    type: apiKey
+    name: Authorization
+    in: header
+    description: 'Ingresar el valor completo: Bearer <token>. Se propaga a los servicios
+      consumidos.'
+security:
+- Bearer: []
+paths:
+  /documento_digital/{id}/diploma/preview:
+    get:
+      tags:
+      - documento_digital
+      summary: Generar
+      operationId: DiplomaPreviewController_Generar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/DiplomaPreviewResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      tags:
+      - documento_digital
+      summary: Preparar
+      operationId: DiplomaPreviewController_Preparar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            documento_identidad_secretario:
+              type: integer
+              format: int64
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/DiplomaPreviewResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /documento_digital/{id}/firmar:
+    post:
+      tags:
+      - documento_digital
+      summary: Firmar
+      operationId: FirmaDiplomaController_Firmar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/FirmaDiplomaInput'
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/FirmaDiplomaResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /documento_digital/{id}/firma:
+    delete:
+      tags:
+      - documento_digital
+      summary: Anular
+      operationId: FirmaDiplomaController_Anular
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/AnularFirmaDiplomaInput'
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/AnularFirmaDiplomaResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /diplomas/periodos-academicos:
+    get:
+      tags:
+      - diplomas
+      summary: Periodos Academicos
+      operationId: EstudianteGradoController_PeriodosAcademicos
+      parameters: []
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/PeriodoAcademico'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /diplomas/estudiantes-aprobados:
+    get:
+      tags:
+      - diplomas
+      summary: Aprobados Por Facultad
+      operationId: EstudianteGradoController_AprobadosPorFacultad
+      parameters:
+      - name: periodo_id
+        in: query
+        required: true
+        type: integer
+        description: Periodo id.
+      - name: tipo_documento_digital_id
+        in: query
+        required: false
+        type: integer
+        description: Tipo documento digital id.
+      - name: tipo_documento_digital_codigo
+        in: query
+        required: false
+        type: string
+        description: Tipo documento digital codigo.
+      - name: codigo_estudiante
+        in: query
+        required: false
+        type: integer
+        description: Codigo estudiante.
+      - name: codigos_estudiante
+        in: query
+        required: false
+        type: string
+        description: Códigos separados por comas.
+      - name: facultad_id
+        in: query
+        required: false
+        type: integer
+        description: Facultad id.
+      - name: programa_academico_id
+        in: query
+        required: false
+        type: integer
+        description: Programa academico id.
+      - name: excluir_registrados
+        in: query
+        required: false
+        type: boolean
+        description: Excluir registrados.
+        default: true
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/EstudiantesAprobadosGradoResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /diplomas/estudiantes-aprobados/documentos:
+    post:
+      tags:
+      - diplomas
+      summary: Crear Documentos Aprobados
+      operationId: EstudianteGradoController_CrearDocumentosAprobados
+      parameters:
+      - name: tipo_documento_digital_codigo
+        in: query
+        required: false
+        type: string
+        description: Tipo documento digital codigo.
+      - name: codigos_estudiante
+        in: query
+        required: false
+        type: string
+        description: Códigos separados por comas.
+      - name: excluir_registrados
+        in: query
+        required: false
+        type: boolean
+        description: Excluir registrados.
+        default: true
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/CrearDocumentosAprobadosInput'
+      responses:
+        '201':
+          description: Operación exitosa.
+          schema: &id001
+            $ref: '#/definitions/CrearDocumentosAprobadosResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '200':
+          description: Simulación (dry_run).
+          schema: *id001
+        '207':
+          description: Resultado con errores parciales.
+          schema: *id001
+  /diplomas/registro-control/archivo:
+    get:
+      tags:
+      - diplomas
+      summary: Descargar
+      operationId: DiplomasZIPController_Descargar
+      parameters:
+      - name: ceremonia_id
+        in: query
+        required: false
+        type: integer
+        description: Ceremonia id.
+      - name: facultad_id
+        in: query
+        required: false
+        type: integer
+        description: Facultad id.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            type: file
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Falta Authorization con prefijo Bearer.
+          schema:
+            $ref: '#/definitions/Error'
+      produces:
+      - application/zip
+      - application/json
+  /diplomas/registro-control/opciones:
+    get:
+      tags:
+      - diplomas
+      summary: Opciones
+      operationId: DiplomasZIPController_Opciones
+      parameters: []
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/RegistroControlCatalogo'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Falta Authorization con prefijo Bearer.
+          schema:
+            $ref: '#/definitions/Error'
+  /firmantes/rol-activo:
+    get:
+      tags:
+      - firmantes
+      summary: Rol Activo
+      operationId: FirmanteController_RolActivo
+      parameters:
+      - name: documento_identidad
+        in: query
+        required: true
+        type: integer
+        description: Documento identidad.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/FirmanteActivo'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /firmantes/firma:
+    post:
+      tags:
+      - firmantes
+      summary: Subir Firma
+      operationId: FirmaFirmanteController_SubirFirma
+      parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/SubirFirmaFirmanteInput'
+      responses:
+        '201':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/SubirFirmaFirmanteResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/:
+    get:
+      tags:
+      - ceremonias
+      summary: Listar
+      operationId: CeremoniaController_Listar
+      parameters:
+      - name: documento_identidad_secretario
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad secretario.
+      - name: periodo_id
+        in: query
+        required: false
+        type: integer
+        description: Periodo id.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/TableroCeremoniasResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      tags:
+      - ceremonias
+      summary: Crear
+      operationId: CeremoniaController_Crear
+      parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/CrearCeremoniaInput'
+      responses:
+        '201':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/CrearCeremoniaResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/parametrizacion-registro:
+    get:
+      tags:
+      - ceremonias
+      summary: Obtener Parametrizacion Registro
+      operationId: CeremoniaController_ObtenerParametrizacionRegistro
+      parameters:
+      - name: documento_identidad_secretario
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad secretario.
+      - name: vigencia
+        in: query
+        required: false
+        type: integer
+        description: Vigencia.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/ParametrizacionRegistroResponse'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      tags:
+      - ceremonias
+      summary: Guardar Parametrizacion Registro
+      operationId: CeremoniaController_GuardarParametrizacionRegistro
+      parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/ParametrizacionRegistroInput'
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/ParametrizacionRegistroResponse'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/programas/{programa_id}/estudiantes:
+    get:
+      tags:
+      - ceremonias
+      summary: Estudiantes Programa
+      operationId: CeremoniaController_EstudiantesPrograma
+      parameters:
+      - name: programa_id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: documento_identidad_secretario
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad secretario.
+      - name: periodo_id
+        in: query
+        required: false
+        type: integer
+        description: Periodo id.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/EstudiantesProgramaCeremoniaResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/decano:
+    get:
+      tags:
+      - ceremonias
+      summary: Listar Decano
+      operationId: CeremoniaController_ListarDecano
+      parameters:
+      - name: documento_identidad_decano
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad decano.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/TableroCeremoniasResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/secretaria-general:
+    get:
+      tags:
+      - ceremonias
+      summary: Listar Secretaria General
+      operationId: CeremoniaController_ListarSecretariaGeneral
+      parameters:
+      - name: documento_identidad_firmante
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad firmante.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/TableroCeremoniasResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/rector:
+    get:
+      tags:
+      - ceremonias
+      summary: Listar Rector
+      operationId: CeremoniaController_ListarRector
+      parameters:
+      - name: documento_identidad_firmante
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad firmante.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/TableroCeremoniasResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/{id}/firmas:
+    get:
+      tags:
+      - ceremonias
+      summary: Listar Firmas
+      operationId: CeremoniaController_ListarFirmas
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: documento_identidad_secretario
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad secretario.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/CeremoniaFirmasResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      tags:
+      - ceremonias
+      summary: Firmar Masivamente
+      operationId: CeremoniaController_FirmarMasivamente
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/FirmaMasivaCeremoniaInput'
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema: &id002
+            $ref: '#/definitions/FirmaMasivaCeremoniaResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Ningún documento firmado y al menos un error.
+          schema: *id002
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/{id}/firmas-decano:
+    get:
+      tags:
+      - ceremonias
+      summary: Listar Firmas Decano
+      operationId: CeremoniaController_ListarFirmasDecano
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: documento_identidad_decano
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad decano.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/CeremoniaFirmasResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      tags:
+      - ceremonias
+      summary: Firmar Masivamente Decano
+      operationId: CeremoniaController_FirmarMasivamenteDecano
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/FirmaMasivaCeremoniaInput'
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema: &id003
+            $ref: '#/definitions/FirmaMasivaCeremoniaResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Ningún documento firmado y al menos un error.
+          schema: *id003
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/{id}/firmas-secretaria-general:
+    get:
+      tags:
+      - ceremonias
+      summary: Listar Firmas Secretaria General
+      operationId: CeremoniaController_ListarFirmasSecretariaGeneral
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: documento_identidad_firmante
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad firmante.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/CeremoniaFirmasResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      tags:
+      - ceremonias
+      summary: Firmar Masivamente Secretaria General
+      operationId: CeremoniaController_FirmarMasivamenteSecretariaGeneral
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/FirmaMasivaCeremoniaInput'
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema: &id004
+            $ref: '#/definitions/FirmaMasivaCeremoniaResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Ningún documento firmado y al menos un error.
+          schema: *id004
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/{id}/firmas-rector:
+    get:
+      tags:
+      - ceremonias
+      summary: Listar Firmas Rector
+      operationId: CeremoniaController_ListarFirmasRector
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: documento_identidad_firmante
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad firmante.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/CeremoniaFirmasResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      tags:
+      - ceremonias
+      summary: Firmar Masivamente Rector
+      operationId: CeremoniaController_FirmarMasivamenteRector
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/FirmaMasivaCeremoniaInput'
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema: &id005
+            $ref: '#/definitions/FirmaMasivaCeremoniaResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Ningún documento firmado y al menos un error.
+          schema: *id005
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/{id}/asignar:
+    post:
+      tags:
+      - ceremonias
+      summary: Asignar
+      operationId: CeremoniaController_Asignar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/AsignarEstudiantesCeremoniaInput'
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/AsignarEstudiantesCeremoniaResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/{id}/programa:
+    delete:
+      tags:
+      - ceremonias
+      summary: Quitar Programa
+      operationId: CeremoniaController_QuitarPrograma
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/QuitarProgramaCeremoniaInput'
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/AsignarEstudiantesCeremoniaResult'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+  /ceremonias/{id}:
+    put:
+      tags:
+      - ceremonias
+      summary: Actualizar
+      operationId: CeremoniaController_Actualizar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: body
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/ActualizarCeremoniaInput'
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            $ref: '#/definitions/CeremoniaResumen'
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      tags:
+      - ceremonias
+      summary: Eliminar
+      operationId: CeremoniaController_Eliminar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        format: int64
+        description: Identificador del recurso.
+      - name: documento_identidad_secretario
+        in: query
+        required: false
+        type: integer
+        description: Documento identidad secretario.
+      responses:
+        '200':
+          description: Operación exitosa.
+          schema:
+            type: object
+            properties:
+              deleted:
+                type: boolean
+        '400':
+          description: Entrada inválida.
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Sin rol activo o sin permisos.
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Estado incompatible con la operación.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Error interno.
+          schema:
+            $ref: '#/definitions/Error'
+        '502':
+          description: Error de un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+        '504':
+          description: Tiempo de espera agotado en un servicio externo.
+          schema:
+            $ref: '#/definitions/Error'
+definitions:
+  DiplomaPreviewResult:
+    type: object
+    properties:
+      preview:
+        type: boolean
+      documento_id:
+        type: integer
+        format: int64
+      diploma_id:
+        type: integer
+        format: int64
+      tipo_documento:
+        type: string
+      documento_digital:
+        $ref: '#/definitions/documentoDigitalResponse'
+      diploma_digital:
+        $ref: '#/definitions/diplomaDigitalResponse'
+      metadatos:
+        $ref: '#/definitions/DiplomaPreviewMetadatos'
+      file:
+        type: string
+  documentoDigitalResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      tipo_documento_digital_id:
+        type: integer
+        format: int64
+      estado_documento_id:
+        type: integer
+        format: int64
+      codigo_estudiante:
+        type: integer
+        format: int64
+      facultad_id:
+        type: integer
+        format: int64
+      programa_academico_id:
+        type: integer
+        format: int64
+      periodo_id:
+        type: integer
+        format: int64
+      vigencia:
+        type: integer
+      nombre_estudiante:
+        type: string
+      tipo_documento_estudiante:
+        type: string
+      numero_documento_estudiante:
+        type: string
+      municipio_expedicion:
+        type: string
+      titulo_otorgado:
+        type: string
+      uuid_documento:
+        type: string
+      activo:
+        type: boolean
+  diplomaDigitalResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      documento_digital:
+        $ref: '#/definitions/documentoDigitalResponse'
+      facultad_id:
+        type: integer
+        format: int64
+      vigencia:
+        type: integer
+      fecha_grado:
+        type: string
+        format: date-time
+      nombre_estudiante:
+        type: string
+      tipo_documento_estudiante:
+        type: string
+      numero_documento_estudiante:
+        type: string
+      municipio_expedicion:
+        type: string
+      titulo_otorgado:
+        type: string
+      consecutivo_diploma:
+        type: integer
+        format: int64
+      consecutivo_facultad:
+        type: integer
+      registro_grado:
+        $ref: '#/definitions/registroGradoResponse'
+      activo:
+        type: boolean
+  registroGradoResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      folio_registro:
+        $ref: '#/definitions/folioRegistroResponse'
+      numero_registro:
+        type: integer
+  folioRegistroResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      libro_registro:
+        $ref: '#/definitions/libroRegistroResponse'
+      numero_folio:
+        type: integer
+  libroRegistroResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      numero_libro:
+        type: integer
+  DiplomaPreviewMetadatos:
+    type: object
+    properties:
+      titulo:
+        type: string
+      nombre_estudiante:
+        type: string
+      tipo_documento_estudiante:
+        type: string
+      numero_documento:
+        type: string
+      lugar_expedicion:
+        type: string
+      fecha_ceremonia:
+        type: string
+      diploma_id:
+        type: integer
+        format: int64
+      libro:
+        type: integer
+      folio:
+        type: integer
+      numero_registro:
+        type: integer
+      facultad:
+        type: string
+  FirmaDiplomaInput:
+    type: object
+    properties:
+      nombre:
+        type: string
+      descripcion:
+        type: string
+      documento_identidad_firmante:
+        type: integer
+        format: int64
+      metadatos:
+        type: object
+        additionalProperties: true
+      firmantes:
+        type: array
+        items:
+          $ref: '#/definitions/PersonaFirma'
+      representantes:
+        type: array
+        items:
+          $ref: '#/definitions/PersonaFirma'
+      file:
+        type: string
+  PersonaFirma:
+    type: object
+    properties:
+      nombre:
+        type: string
+      cargo:
+        type: string
+      oficina:
+        type: string
+      tipoId:
+        type: string
+      identificacion:
+        type: string
+      firma_url:
+        type: string
+      orden_campos:
+        type: array
+        items:
+          type: string
+  FirmaDiplomaResult:
+    type: object
+    properties:
+      preview:
+        type: boolean
+      firma_id:
+        type: string
+      repositorio_documental:
+        type: string
+      documento_id:
+        type: integer
+        format: int64
+      uuid_documento:
+        type: string
+      hash_sha256:
+        type: string
+      codigo_autenticidad:
+        type: string
+      qr_url_segura:
+        type: string
+      firmante:
+        $ref: '#/definitions/FirmanteActivo'
+      s3:
+        $ref: '#/definitions/S3ObjectRef'
+      dynamodb:
+        type: object
+        additionalProperties: true
+      documento_digital:
+        $ref: '#/definitions/documentoDigitalResponse'
+      firma_documento:
+        $ref: '#/definitions/firmaDocumentoResponse'
+      file:
+        type: string
+  FirmanteActivo:
+    type: object
+    properties:
+      rol:
+        type: string
+      orden:
+        type: integer
+      cargo_id:
+        type: integer
+      cargo:
+        type: string
+      nombre:
+        type: string
+      documento_identidad:
+        type: integer
+        format: int64
+      dependencia:
+        type: string
+      facultad_id:
+        type: integer
+        format: int64
+      enlace_firma:
+        type: string
+      firma_imagen:
+        type: string
+      firma_firmante:
+        $ref: '#/definitions/FirmaFirmanteCRUDResponse'
+  FirmaFirmanteCRUDResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      documento_identidad:
+        type: integer
+        format: int64
+      enlace_firma:
+        type: string
+      activo:
+        type: boolean
+  S3ObjectRef:
+    type: object
+    properties:
+      bucket:
+        type: string
+      key:
+        type: string
+      version_id:
+        type: string
+      etag:
+        type: string
+      uri:
+        type: string
+  firmaDocumentoResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      documento_digital:
+        $ref: '#/definitions/documentoDigitalResponse'
+      firma_firmante:
+        $ref: '#/definitions/FirmaFirmanteCRUDResponse'
+      rol_firmante_id:
+        type: integer
+        format: int64
+      documento_identidad:
+        type: integer
+        format: int64
+      activo:
+        type: boolean
+  AnularFirmaDiplomaInput:
+    type: object
+    properties:
+      documento_identidad_firmante:
+        type: integer
+        format: int64
+  AnularFirmaDiplomaResult:
+    type: object
+    properties:
+      documento_id:
+        type: integer
+        format: int64
+      orden:
+        type: integer
+      anuladas:
+        type: integer
+  PeriodoAcademico:
+    type: object
+    properties:
+      Id:
+        type: integer
+        format: int64
+      Nombre:
+        type: string
+      Year:
+        type: integer
+      Ciclo:
+        type: string
+      CodigoAbreviacion:
+        type: string
+      Activo:
+        type: boolean
+  EstudiantesAprobadosGradoResult:
+    type: object
+    properties:
+      total:
+        type: integer
+      errores:
+        type: integer
+      facultades:
+        type: array
+        items:
+          $ref: '#/definitions/EstudiantesAprobadosFacultad'
+      estudiantes_con_error:
+        type: array
+        items:
+          $ref: '#/definitions/EstudianteAprobadoError'
+  EstudiantesAprobadosFacultad:
+    type: object
+    properties:
+      facultad_id:
+        type: integer
+        format: int64
+      total:
+        type: integer
+      estudiantes:
+        type: array
+        items:
+          $ref: '#/definitions/EstudianteAprobadoGrado'
+  EstudianteAprobadoGrado:
+    type: object
+    properties:
+      periodo_id:
+        type: integer
+        format: int64
+      codigo_estudiante_texto:
+        type: string
+      programa_academico_mid_id:
+        type: integer
+        format: int64
+      Id:
+        type: integer
+        format: int64
+      CodigoEstudiante:
+        type: integer
+        format: int64
+      IdFacultadOikos:
+        type: integer
+        format: int64
+      IdProyectoOikos:
+        type: integer
+        format: int64
+      IdFacultadGedep:
+        type: integer
+        format: int64
+      IdProyectoAccra:
+        type: integer
+        format: int64
+      AnioInsGrado:
+        type: integer
+      PerInsGrado:
+        type: integer
+      Academico:
+        type: boolean
+      Financiero:
+        type: boolean
+      Biblioteca:
+        type: boolean
+      Laboratorios:
+        type: boolean
+      Bienestar:
+        type: boolean
+      Urelinter:
+        type: boolean
+      Orc:
+        type: boolean
+      ObservacionCoordinacion:
+        type: string
+      ObservacionBiblioteca:
+        type: string
+      ObservacionLaboratorios:
+        type: string
+      ObservacionBienestar:
+        type: string
+      ObservacionUrelinter:
+        type: string
+      ObservacionOrc:
+        type: string
+      ObservacionFinanciera:
+        type: string
+      Activo:
+        type: boolean
+      FechaCreacion:
+        type: string
+      FechaModificacion:
+        type: string
+      datos_diploma:
+        $ref: '#/definitions/DatosDiplomaEstudiante'
+  DatosDiplomaEstudiante:
+    type: object
+    properties:
+      nombre:
+        type: string
+      numero_identificacion:
+        type: string
+      titulo:
+        type: string
+      tipo_documento:
+        type: string
+      municipio_expedicion:
+        type: string
+  EstudianteAprobadoError:
+    type: object
+    properties:
+      codigo_estudiante:
+        type: integer
+        format: int64
+      facultad_id:
+        type: integer
+        format: int64
+      error:
+        type: string
+  CrearDocumentosAprobadosInput:
+    type: object
+    properties:
+      periodo_id:
+        type: integer
+        format: int64
+      tipo_documento_digital_id:
+        type: integer
+        format: int64
+      tipo_documento_digital_codigo:
+        type: string
+      estado_documento_id:
+        type: integer
+        format: int64
+      estado_documento_codigo:
+        type: string
+      codigo_estudiante:
+        type: integer
+        format: int64
+      codigos_estudiante:
+        type: array
+        items:
+          type: integer
+          format: int64
+      facultad_id:
+        type: integer
+        format: int64
+      programa_academico_id:
+        type: integer
+        format: int64
+      crear_diplomas:
+        type: boolean
+      fecha_grado:
+        type: string
+        format: date-time
+      estado_documento_creado_id:
+        type: integer
+        format: int64
+      estado_documento_creado_codigo:
+        type: string
+      dry_run:
+        type: boolean
+  CrearDocumentosAprobadosResult:
+    type: object
+    properties:
+      total:
+        type: integer
+      creados:
+        type: integer
+      existentes:
+        type: integer
+      diplomas_creados:
+        type: integer
+      diplomas_existentes:
+        type: integer
+      errores:
+        type: integer
+      dry_run:
+        type: boolean
+      facultades:
+        type: array
+        items:
+          $ref: '#/definitions/CrearDocumentosAprobadosFacultad'
+  CrearDocumentosAprobadosFacultad:
+    type: object
+    properties:
+      facultad_id:
+        type: integer
+        format: int64
+      total:
+        type: integer
+      creados:
+        type: integer
+      existentes:
+        type: integer
+      diplomas_creados:
+        type: integer
+      diplomas_existentes:
+        type: integer
+      errores:
+        type: integer
+      documentos:
+        type: array
+        items:
+          $ref: '#/definitions/CrearDocumentoAprobadoItem'
+  CrearDocumentoAprobadoItem:
+    type: object
+    properties:
+      estudiante:
+        $ref: '#/definitions/EstudianteAprobadoGrado'
+      payload:
+        $ref: '#/definitions/crearDocumentoDigitalRequest'
+      diploma_payload:
+        $ref: '#/definitions/crearDiplomaDigitalRequest'
+      documento_digital:
+        $ref: '#/definitions/documentoDigitalResponse'
+      diploma_digital:
+        $ref: '#/definitions/diplomaDigitalResponse'
+      creado:
+        type: boolean
+      existente:
+        type: boolean
+      diploma_creado:
+        type: boolean
+      diploma_existente:
+        type: boolean
+      error:
+        type: string
+  crearDocumentoDigitalRequest:
+    type: object
+    properties:
+      tipo_documento_digital_id:
+        type: integer
+        format: int64
+      estado_documento_id:
+        type: integer
+        format: int64
+      codigo_estudiante:
+        type: integer
+        format: int64
+      facultad_id:
+        type: integer
+        format: int64
+      programa_academico_id:
+        type: integer
+        format: int64
+      periodo_id:
+        type: integer
+        format: int64
+      vigencia:
+        type: integer
+      nombre_estudiante:
+        type: string
+      tipo_documento_estudiante:
+        type: string
+      numero_documento_estudiante:
+        type: string
+      municipio_expedicion:
+        type: string
+      titulo_otorgado:
+        type: string
+      activo:
+        type: boolean
+  crearDiplomaDigitalRequest:
+    type: object
+    properties:
+      facultad_id:
+        type: integer
+        format: int64
+      vigencia:
+        type: integer
+      fecha_grado:
+        type: string
+        format: date-time
+      nombre_estudiante:
+        type: string
+      tipo_documento_estudiante:
+        type: string
+      numero_documento_estudiante:
+        type: string
+      municipio_expedicion:
+        type: string
+      titulo_otorgado:
+        type: string
+      estado_documento_creado_id:
+        type: integer
+        format: int64
+  RegistroControlCatalogo:
+    type: object
+    properties:
+      facultades:
+        type: array
+        items:
+          $ref: '#/definitions/RegistroControlFacultad'
+  RegistroControlFacultad:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      nombre:
+        type: string
+      ceremonias:
+        type: array
+        items:
+          $ref: '#/definitions/RegistroControlCeremonia'
+  RegistroControlCeremonia:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      fecha:
+        type: string
+      lugar:
+        type: string
+      diplomas_disponibles:
+        type: integer
+  SubirFirmaFirmanteInput:
+    type: object
+    properties:
+      documento_identidad_firmante:
+        type: integer
+        format: int64
+      IdTipoDocumento:
+        type: integer
+        format: int64
+      nombre:
+        type: string
+      descripcion:
+        type: string
+      metadatos:
+        type: object
+        additionalProperties: true
+      file:
+        type: string
+  SubirFirmaFirmanteResult:
+    type: object
+    properties:
+      firmante:
+        $ref: '#/definitions/FirmanteActivo'
+      enlace_firma:
+        type: string
+      documento:
+        type: object
+        additionalProperties: true
+      firma_firmante:
+        $ref: '#/definitions/FirmaFirmanteCRUDResponse'
+  TableroCeremoniasResult:
+    type: object
+    properties:
+      facultad_id:
+        type: integer
+        format: int64
+      total_ceremonias:
+        type: integer
+      total_cupos:
+        type: integer
+      cupos_asignados:
+        type: integer
+      cupos_disponibles:
+        type: integer
+      ceremonias:
+        type: array
+        items:
+          $ref: '#/definitions/CeremoniaResumen'
+      aprobados_total:
+        type: integer
+      aprobados_programas:
+        type: array
+        items:
+          $ref: '#/definitions/ProgramaAprobadoResumen'
+      pendientes_programas:
+        type: array
+        items:
+          $ref: '#/definitions/ProgramaAprobadoResumen'
+      asignados_programas:
+        type: array
+        items:
+          $ref: '#/definitions/ProgramaAprobadoResumen'
+  CeremoniaResumen:
+    type: object
+    properties:
+      periodo_id:
+        type: integer
+        format: int64
+      id:
+        type: integer
+        format: int64
+      relacion_id:
+        type: integer
+        format: int64
+      facultad_id:
+        type: integer
+        format: int64
+      fecha_ceremonia:
+        type: string
+      lugar:
+        type: string
+      cantidad_estudiantes_programada:
+        type: integer
+      cupos_asignados:
+        type: integer
+      cupos_disponibles:
+        type: integer
+      estado_flujo:
+        type: string
+      puede_editar:
+        type: boolean
+      puede_eliminar:
+        type: boolean
+      motivo_bloqueo:
+        type: string
+      observacion:
+        type: string
+      activo:
+        type: boolean
+  ProgramaAprobadoResumen:
+    type: object
+    properties:
+      periodo_id:
+        type: integer
+        format: int64
+      programa_academico_id:
+        type: integer
+        format: int64
+      nombre:
+        type: string
+      cantidad:
+        type: integer
+      ceremonia_id:
+        type: integer
+        format: int64
+      relacion_id:
+        type: integer
+        format: int64
+      lugar:
+        type: string
+      fecha_ceremonia:
+        type: string
+      estado_flujo:
+        type: string
+      puede_reasignar:
+        type: boolean
+      motivo_bloqueo:
+        type: string
+  CrearCeremoniaInput:
+    type: object
+    properties:
+      periodo_id:
+        type: integer
+        format: int64
+      fecha_ceremonia:
+        type: string
+      lugar:
+        type: string
+      cantidad_estudiantes_programada:
+        type: integer
+      observacion:
+        type: string
+      documento_identidad_secretario:
+        type: integer
+        format: int64
+  CrearCeremoniaResult:
+    type: object
+    properties:
+      ceremonia:
+        $ref: '#/definitions/ceremoniaGradoCRUDResponse'
+      facultad:
+        $ref: '#/definitions/ceremoniaFacultadProgramaCRUDResponse'
+      secretario_academico:
+        $ref: '#/definitions/FirmanteActivo'
+      facultades_programas:
+        type: array
+        items:
+          $ref: '#/definitions/ceremoniaFacultadProgramaCRUDResponse'
+  ceremoniaGradoCRUDResponse:
+    type: object
+    properties:
+      periodo_id:
+        type: integer
+        format: int64
+      id:
+        type: integer
+        format: int64
+      fecha_ceremonia:
+        type: string
+      lugar:
+        type: string
+      cantidad_estudiantes_programada:
+        type: integer
+      observacion:
+        type: string
+      activo:
+        type: boolean
+  ceremoniaFacultadProgramaCRUDResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      ceremonia_grado:
+        $ref: '#/definitions/ceremoniaGradoCRUDResponse'
+      facultad_id:
+        type: integer
+        format: int64
+      programa_academico_id:
+        type: integer
+        format: int64
+      cantidad_estudiantes_programada:
+        type: integer
+      activo:
+        type: boolean
+  ParametrizacionRegistroResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      facultad_id:
+        type: integer
+        format: int64
+      vigencia:
+        type: integer
+      libro_inicial:
+        type: integer
+      folio_inicial:
+        type: integer
+      registro_inicial:
+        type: integer
+      consecutivo_facultad_inicial:
+        type: integer
+      folios_por_libro:
+        type: integer
+      registros_por_folio:
+        type: integer
+      activo:
+        type: boolean
+  ParametrizacionRegistroInput:
+    type: object
+    properties:
+      documento_identidad_secretario:
+        type: integer
+        format: int64
+      vigencia:
+        type: integer
+      libro_inicial:
+        type: integer
+      folio_inicial:
+        type: integer
+      registro_inicial:
+        type: integer
+      consecutivo_facultad_inicial:
+        type: integer
+      folios_por_libro:
+        type: integer
+      registros_por_folio:
+        type: integer
+  EstudiantesProgramaCeremoniaResult:
+    type: object
+    properties:
+      programa_academico_id:
+        type: integer
+        format: int64
+      nombre:
+        type: string
+      total:
+        type: integer
+      estudiantes:
+        type: array
+        items:
+          $ref: '#/definitions/EstudianteAprobadoGrado'
+  CeremoniaFirmasResult:
+    type: object
+    properties:
+      ceremonia:
+        $ref: '#/definitions/CeremoniaResumen'
+      total:
+        type: integer
+      firmados:
+        type: integer
+      pendientes:
+        type: integer
+      estudiantes:
+        type: array
+        items:
+          $ref: '#/definitions/CeremoniaFirmaEstudianteResumen'
+  CeremoniaFirmaEstudianteResumen:
+    type: object
+    properties:
+      asignacion_id:
+        type: integer
+        format: int64
+      documento_digital_id:
+        type: integer
+        format: int64
+      codigo_estudiante:
+        type: integer
+        format: int64
+      programa_academico_id:
+        type: integer
+        format: int64
+      programa:
+        type: string
+      nombre_estudiante:
+        type: string
+      tipo_documento_estudiante:
+        type: string
+      numero_documento_estudiante:
+        type: string
+      titulo_otorgado:
+        type: string
+      estado_documento_id:
+        type: integer
+        format: int64
+      firma_secretario:
+        type: boolean
+      firma_decano:
+        type: boolean
+      firma_secretaria_general:
+        type: boolean
+      firma_rector:
+        type: boolean
+      puede_firmar:
+        type: boolean
+      motivo_bloqueo:
+        type: string
+  FirmaMasivaCeremoniaInput:
+    type: object
+    properties:
+      documento_identidad_secretario:
+        type: integer
+        format: int64
+      documento_identidad_firmante:
+        type: integer
+        format: int64
+      documento_digital_ids:
+        type: array
+        items:
+          type: integer
+          format: int64
+  FirmaMasivaCeremoniaResult:
+    type: object
+    properties:
+      ceremonia_id:
+        type: integer
+        format: int64
+      total:
+        type: integer
+      firmados:
+        type: integer
+      omitidos:
+        type: integer
+      errores:
+        type: integer
+      message:
+        type: string
+      resultados:
+        type: array
+        items:
+          $ref: '#/definitions/FirmaMasivaCeremoniaItem'
+  FirmaMasivaCeremoniaItem:
+    type: object
+    properties:
+      documento_digital_id:
+        type: integer
+        format: int64
+      firmado:
+        type: boolean
+      error:
+        type: string
+      result:
+        $ref: '#/definitions/FirmaDiplomaResult'
+  AsignarEstudiantesCeremoniaInput:
+    type: object
+    properties:
+      periodo_id:
+        type: integer
+        format: int64
+      documento_identidad_secretario:
+        type: integer
+        format: int64
+      programas:
+        type: array
+        items:
+          $ref: '#/definitions/AsignarProgramaCeremoniaItem'
+  AsignarProgramaCeremoniaItem:
+    type: object
+    properties:
+      programa_academico_id:
+        type: integer
+        format: int64
+      cantidad:
+        type: integer
+  AsignarEstudiantesCeremoniaResult:
+    type: object
+    properties:
+      ceremonia_id:
+        type: integer
+        format: int64
+      asignados:
+        type: integer
+      omitidos:
+        type: integer
+      errores:
+        type: integer
+  QuitarProgramaCeremoniaInput:
+    type: object
+    properties:
+      documento_identidad_secretario:
+        type: integer
+        format: int64
+      programa_academico_id:
+        type: integer
+        format: int64
+  ActualizarCeremoniaInput:
+    type: object
+    properties:
+      periodo_id:
+        type: integer
+        format: int64
+      fecha_ceremonia:
+        type: string
+      lugar:
+        type: string
+      cantidad_estudiantes_programada:
+        type: integer
+      observacion:
+        type: string
+      documento_identidad_secretario:
+        type: integer
+        format: int64
+  Error:
+    type: object
+    properties:
+      message:
+        type: string
