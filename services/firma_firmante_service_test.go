@@ -43,3 +43,24 @@ func TestNormalizarFirmaPNG(t *testing.T) {
 		t.Fatal("output image is empty")
 	}
 }
+
+func TestBuildDocumentoFirmaPayloadPreservaDatos(t *testing.T) {
+	firmante := &FirmanteActivo{DocumentoIdentidad: 123, Nombre: "Firmante", Cargo: "Decano", CargoID: 270, Rol: "decano"}
+	for _, tc := range []struct{ nombre, expected string }{
+		{"", "firma_diploma.png"}, {"rubrica", "rubrica.png"}, {"rubrica.png", "rubrica.png"}, {"rubrica.jpg", "rubrica.jpg.png"},
+	} {
+		t.Run(tc.nombre, func(t *testing.T) {
+			input := &SubirFirmaFirmanteInput{IdTipoDocumento: 42, Nombre: tc.nombre, Descripcion: "Descripción original", Metadatos: map[string]interface{}{"custom": "valor"}}
+			payload := buildDocumentoFirmaPayload(input, firmante, "normalized-base64")
+			if payload.Nombre != tc.expected || payload.IdTipoDocumento != 42 || payload.Descripcion != input.Descripcion || payload.File != "normalized-base64" {
+				t.Fatalf("unexpected payload: name=%s type=%d", payload.Nombre, payload.IdTipoDocumento)
+			}
+			if payload.Metadatos["custom"] != "valor" || payload.Metadatos["firmante"] != firmante.Nombre || payload.Metadatos["cargo"] != firmante.Cargo || payload.Metadatos["cargo_id"] != firmante.CargoID {
+				t.Fatal("metadata changed")
+			}
+			if len(input.Metadatos) != 1 || input.Nombre != tc.nombre {
+				t.Fatal("input mutated")
+			}
+		})
+	}
+}

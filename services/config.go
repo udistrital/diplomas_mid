@@ -38,12 +38,13 @@ func administrativaAmazonAPIURL() string {
 	return configString("AdministrativaAmazonAPIURL", "ADMINISTRATIVA_AMAZON_API_URL")
 }
 
-func documentosCrudURL() string {
-	return configEndpoint("DocumentosCrudURL", "DOCUMENTOS_CRUD_URL", "/v1/gestor_documental")
-}
-
 func gestorDocumentalURL() string {
-	return configEndpoint("GestorDocumentalURL", "GESTOR_DOCUMENTAL_URL", "/v1/document")
+	base := configString("GestorDocumentalURL", "GESTOR_DOCUMENTAL_URL")
+	if base == "" {
+		return ""
+	}
+	base = strings.TrimSuffix(base, "/v1/document")
+	return strings.TrimSuffix(base, "/v1") + "/v1/document"
 }
 
 func pazYSalvosMidURL() string {

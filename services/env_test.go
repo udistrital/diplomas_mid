@@ -128,3 +128,14 @@ func TestDotEnvSynchronizesOASAndAcademicConfig(t *testing.T) {
 		t.Fatal("runtime runmode not synchronized")
 	}
 }
+
+func TestGestorDocumentalNoDuplicaRuta(t *testing.T) {
+	old, _ := beego.AppConfig.String("GestorDocumentalURL")
+	defer beego.AppConfig.Set("GestorDocumentalURL", old)
+	for _, base := range []string{"http://gestor", "http://gestor/", "http://gestor/v1", "http://gestor/v1/document", "http://gestor/v1/document/"} {
+		beego.AppConfig.Set("GestorDocumentalURL", base)
+		if got := gestorDocumentalURL(); got != "http://gestor/v1/document" {
+			t.Fatalf("incorrect endpoint: %s", got)
+		}
+	}
+}
