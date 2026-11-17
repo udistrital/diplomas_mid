@@ -10,6 +10,7 @@ import (
 	"image/png"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	beego "github.com/beego/beego/v2/server/web"
@@ -31,8 +32,25 @@ func TestSubirFirmaPropagaAuthorizationAlCRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, token := range []string{"Bearer local-test-one", "Bearer local-test-two"} {
-		t.Run(token, func(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		httpStatus int
+		body       string
+		success    bool
+	}{
+		{"success", 200, `{"Status":"200","res":{"Id":123,"Enlace":"mock-document-id"}}`, true},
+		{"numeric-status", 200, `{"Status":200,"res":{"Id":123,"Enlace":"mock-document-id"}}`, true},
+		{"http400", 400, `{}`, false}, {"http404", 404, `{}`, false},
+		{"http500", 500, `{}`, false}, {"http502", 502, `{}`, false},
+		{"body400", 200, `{"Status":"400","res":{"Enlace":"must-not-register"}}`, false},
+		{"body404", 200, `{"Status":"404","res":{"Enlace":"must-not-register"}}`, false},
+		{"body500", 200, `{"Status":500,"res":{"Enlace":"must-not-register"}}`, false},
+		{"body502", 200, `{"Status":"502","res":{"Enlace":"must-not-register"}}`, false},
+		{"invalid-status", 200, `{"Status":"invalid","res":{"Enlace":"must-not-register"}}`, false},
+		{"missing-uid", 200, `{"Status":"200","res":{"Id":123}}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			token := "Bearer local-test-" + tc.name
 			registered := 0
 			stored := 0
 			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,12 +60,34 @@ func TestSubirFirmaPropagaAuthorizationAlCRUD(t *testing.T) {
 					fmt.Fprint(w, `[{"Id":1,"Documento":123,"Nombre":"Firmante de prueba","CargoId":{"Id":158,"Cargo":"SECRETARIO ACADEMICO"}}]`)
 				case r.URL.Path == "/v1/firma_firmante/" && r.Method == http.MethodGet:
 					fmt.Fprint(w, `[]`)
-				case r.URL.Path == "/v1/gestor_documental" && r.Method == http.MethodPost:
+				case r.URL.Path == "/v1/document/uploadAnyFormat" && r.Method == http.MethodPost:
 					stored++
 					if r.Header.Get("Authorization") != token {
 						t.Error("gestor documental no recibió Authorization entrante")
 					}
-					fmt.Fprint(w, `[{"Enlace":"mock-document-id"}]`)
+					var docs []map[string]interface{}
+					if err := json.NewDecoder(r.Body).Decode(&docs); err != nil || len(docs) != 1 {
+						t.Errorf("invalid document array: %v", err)
+					} else {
+						doc := docs[0]
+						if doc["IdTipoDocumento"] != float64(38) || doc["nombre"] != "firma_diploma.png" || doc["descripcion"] != "123" {
+							t.Error("document fields changed")
+						}
+						metadata, ok := doc["metadatos"].(map[string]interface{})
+						if !ok || metadata["documento_identidad"] != float64(123) || metadata["rol"] != "secretario_academico" {
+							t.Error("metadata changed")
+						}
+						file, _ := doc["file"].(string)
+						decoded, err := base64.StdEncoding.DecodeString(file)
+						if err != nil || strings.HasPrefix(file, "data:") {
+							t.Error("file must be pure base64")
+						}
+						if _, err := png.Decode(bytes.NewReader(decoded)); err != nil {
+							t.Errorf("file must be PNG: %v", err)
+						}
+					}
+					w.WriteHeader(tc.httpStatus)
+					fmt.Fprint(w, tc.body)
 				case r.URL.Path == "/v1/firma_firmante/" && r.Method == http.MethodPost:
 					if r.Header.Get("Authorization") != token {
 						w.WriteHeader(http.StatusUnauthorized)
@@ -69,12 +109,15 @@ func TestSubirFirmaPropagaAuthorizationAlCRUD(t *testing.T) {
 				}
 			}))
 			defer upstream.Close()
-			for _, key := range []string{"AdministrativaAmazonAPIURL", "DiplomasCrudURL", "DocumentosCrudURL"} {
+			for _, key := range []string{"AdministrativaAmazonAPIURL", "DiplomasCrudURL", "GestorDocumentalURL"} {
 				old, _ := beego.AppConfig.String(key)
 				beego.AppConfig.Set(key, upstream.URL)
 				k := key
 				defer beego.AppConfig.Set(k, old)
 			}
+			// Resolve the document service exclusively through its existing environment variable.
+			beego.AppConfig.Set("GestorDocumentalURL", "${GESTOR_DOCUMENTAL_URL}")
+			t.Setenv("GESTOR_DOCUMENTAL_URL", upstream.URL)
 			payload, _ := json.Marshal(map[string]interface{}{"documento_identidad_firmante": 123, "file": base64.StdEncoding.EncodeToString(pngData.Bytes())})
 			req := httptest.NewRequest(http.MethodPost, "/v1/firmantes/firma", bytes.NewReader(payload))
 			req.Header.Set("Content-Type", "application/json")
@@ -83,6 +126,12 @@ func TestSubirFirmaPropagaAuthorizationAlCRUD(t *testing.T) {
 			app := beego.NewHttpSever()
 			app.Router("/v1/firmantes/firma", &FirmaFirmanteController{}, "post:SubirFirma")
 			app.Handlers.ServeHTTP(res, req)
+			if !tc.success {
+				if res.Code < 400 || stored != 1 || registered != 0 {
+					t.Fatalf("failed upload: status=%d stored=%d registered=%d", res.Code, stored, registered)
+				}
+				return
+			}
 			if res.Code != http.StatusCreated {
 				t.Fatalf("upload status %d, expected 201: %s", res.Code, res.Body.String())
 			}

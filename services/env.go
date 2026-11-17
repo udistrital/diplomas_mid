@@ -71,7 +71,6 @@ func syncEnvToAppConfig() error {
 		"FIRMA_ELECTRONICA_MID_URL":         "FirmaElectronicaMidURL",
 		"DIPLOMAS_CRUD_URL":                 "DiplomasCrudURL",
 		"ADMINISTRATIVA_AMAZON_API_URL":     "AdministrativaAmazonAPIURL",
-		"DOCUMENTOS_CRUD_URL":               "DocumentosCrudURL",
 		"GESTOR_DOCUMENTAL_URL":             "GestorDocumentalURL",
 		"PAZ_Y_SALVOS_MID_URL":              "PazYSalvosMidURL",
 		"ACADEMICA_CORE_SERVICE_URL":        "AcademicaCoreServiceURL",

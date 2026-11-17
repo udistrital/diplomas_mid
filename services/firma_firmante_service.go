@@ -109,6 +109,13 @@ func (s FirmaFirmanteService) SubirFirma(ctx context.Context, input *SubirFirmaF
 		return nil, fmt.Errorf("%w: file is required", ErrInvalidInput)
 	}
 
+	if input.IdTipoDocumento < 0 {
+		return nil, fmt.Errorf("%w: IdTipoDocumento must be positive", ErrInvalidInput)
+	}
+	if gestorDocumentalURL() == "" {
+		return nil, fmt.Errorf("%w: GestorDocumentalURL is required", ErrInvalidInput)
+	}
+
 	firmanteActivo, err := FirmanteService{}.ConsultarRolActivo(
 		ctx,
 		input.DocumentoIdentidadFirmante,
@@ -131,13 +138,13 @@ func (s FirmaFirmanteService) SubirFirma(ctx context.Context, input *SubirFirmaF
 	var documentoResponse interface{}
 	status, err := request.PostWithContext(
 		ctx,
-		documentosCrudURL(),
+		gestorDocumentalURL()+"/uploadAnyFormat",
 		documentoPayload,
 		&documentoResponse,
 	)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"%w: documentos_crud gestor_documental status %d: %v",
+			"%w: gestor_documental_mid status %d: %v",
 			ErrExternalService,
 			status,
 			err,
@@ -145,23 +152,32 @@ func (s FirmaFirmanteService) SubirFirma(ctx context.Context, input *SubirFirmaF
 	}
 	if status < 200 || status >= 300 {
 		return nil, fmt.Errorf(
-			"%w: documentos_crud gestor_documental returned status %d",
+			"%w: gestor_documental_mid returned status %d",
 			ErrExternalService,
 			status,
 		)
+	}
+
+	if envelope, ok := documentoResponse.(map[string]interface{}); ok {
+		if _, exists := envelope["Status"]; exists {
+			code, codeErr := extractString(envelope, "Status")
+			numericCode, parseErr := strconv.Atoi(code)
+			if codeErr != nil || parseErr != nil || numericCode < 200 || numericCode >= 300 {
+				return nil, fmt.Errorf("%w: gestor_documental_mid upload failed (invalid or unsuccessful Status)", ErrExternalService)
+			}
+		}
 	}
 
 	documento := unwrapDocumentoResponse(documentoResponse)
 	enlaceFirma, err := extractString(
 		documento,
 		"Enlace", "enlace",
-		"Id", "id",
 		"UUID", "uuid",
 		"Uid", "uid",
 	)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"%w: documentos_crud gestor_documental response missing Enlace: %v; response_shape=%s",
+			"%w: gestor_documental_mid response missing Enlace: %v; response_shape=%s",
 			ErrExternalService,
 			err,
 			describeResponseShape(documentoResponse),
@@ -218,6 +234,10 @@ func buildDocumentoFirmaPayload(
 	nombre := strings.TrimSpace(input.Nombre)
 	if nombre == "" {
 		nombre = "firma_diploma"
+	}
+
+	if !strings.HasSuffix(nombre, ".png") {
+		nombre += ".png"
 	}
 
 	descripcion := strings.TrimSpace(input.Descripcion)
