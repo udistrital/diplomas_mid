@@ -33,7 +33,11 @@ func (s FirmaDiplomaService) Firmar(ctx context.Context, documentoID int64, inpu
 	if err := validarRubricaFirmante(ctx, firmanteActivo); err != nil {
 		return nil, err
 	}
-	if err := validarFlujoFirmaDocumento(ctx, documentoID, firmanteActivo); err != nil {
+	firmasEsperadas, err := listarFirmasDocumento(ctx, documentoID)
+	if err != nil {
+		return nil, err
+	}
+	if err := validarFlujoFirmaDocumento(ctx, documentoID, firmanteActivo, firmasEsperadas); err != nil {
 		return nil, err
 	}
 	if err := asegurarRegistroDiploma(ctx, documentoID); err != nil {
@@ -41,7 +45,7 @@ func (s FirmaDiplomaService) Firmar(ctx context.Context, documentoID int64, inpu
 	}
 	preview := firmanteActivo.Orden < 4
 	if preview {
-		firmaDocumento, err := registrarFirmaDocumentoDiploma(ctx, documentoID, firmanteActivo)
+		firmaDocumento, err := registrarFirmaDocumentoDiploma(ctx, documentoID, firmanteActivo, idsFirmasActivas(firmasEsperadas))
 		if err != nil {
 			return nil, err
 		}
@@ -125,24 +129,13 @@ func (s FirmaDiplomaService) Firmar(ctx context.Context, documentoID int64, inpu
 		return nil, err
 	}
 
-	var documentoResponse documentoDigitalResponse
-	updatePayload := actualizarUUIDDocumentoRequest{UUIDDocumento: firmaResponse.UUIDDocumento}
-	status, err = request.PutWithContext(
-		ctx,
-		fmt.Sprintf("%s/documento_digital/%d/uuid", diplomasCrudURL(), documentoID),
-		updatePayload,
-		&documentoResponse,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("diplomas_crud actualizar uuid status %d: %w", status, err)
-	}
-	if status < 200 || status >= 300 {
-		return nil, fmt.Errorf("%w: diplomas_crud actualizar uuid returned status %d", ErrExternalService, status)
-	}
-
-	firmaDocumento, err := registrarFirmaDocumentoDiploma(ctx, documentoID, firmanteActivo)
+	firmaDocumento, err := registrarFirmaDocumentoDiploma(ctx, documentoID, firmanteActivo, idsFirmasActivas(firmasEsperadas), firmaResponse.UUIDDocumento)
 	if err != nil {
 		return nil, err
+	}
+	var documentoResponse documentoDigitalResponse
+	if firmaDocumento.DocumentoDigital != nil {
+		documentoResponse = *firmaDocumento.DocumentoDigital
 	}
 
 	return &FirmaDiplomaResult{
@@ -206,31 +199,35 @@ func (s FirmaDiplomaService) Anular(ctx context.Context, documentoID int64, inpu
 	if err != nil {
 		return nil, err
 	}
-	anuladas := 0
+	if err := validarReversionFirma(firmas, firmanteActivo.Orden, firmanteActivo.DocumentoIdentidad); err != nil {
+		return nil, err
+	}
+	estadoCodigo := "GENERADO"
 	for _, firma := range firmas {
-		orden, ok := ordenRolFirmante(firma.RolFirmanteID)
-		if !ok {
-			continue
-		}
-		if orden > firmanteActivo.Orden {
-			return nil, fmt.Errorf("%w: no se puede anular porque existe una firma posterior", ErrInvalidState)
+		if orden, ok := ordenRolFirmante(firma.RolFirmanteID); firma.Activo && ok && orden < firmanteActivo.Orden {
+			estadoCodigo = "FIRMA_PAR"
 		}
 	}
-	for _, firma := range firmas {
-		orden, ok := ordenRolFirmante(firma.RolFirmanteID)
-		if !ok || orden != firmanteActivo.Orden {
-			continue
-		}
-		status, err := request.DeleteWithContext(ctx, fmt.Sprintf("%s/firma_documento/%d", diplomasCrudURL(), firma.ID), nil)
-		if err != nil {
-			return nil, fmt.Errorf("%w: diplomas_crud firma_documento delete status %d: %v", ErrExternalService, status, err)
-		}
-		if status < 200 || status >= 300 {
-			return nil, fmt.Errorf("%w: diplomas_crud firma_documento delete returned status %d", ErrExternalService, status)
-		}
-		anuladas++
+	estadoID, err := resolverParametroID(ctx, 0, estadoCodigo)
+	if err != nil {
+		return nil, err
 	}
-	return &AnularFirmaDiplomaResult{DocumentoID: documentoID, Orden: firmanteActivo.Orden, Anuladas: anuladas}, nil
+	payload := revertirFirmaDocumentoRequest{
+		DocumentoIdentidad: firmanteActivo.DocumentoIdentidad,
+		RolFirmanteID:      int64(firmanteActivo.CargoID),
+		FirmasEsperadas:    idsFirmasActivas(firmas), EstadoNuevoID: estadoID,
+	}
+	var result AnularFirmaDiplomaResult
+	status, err = request.PostWithContext(ctx, fmt.Sprintf("%s/documento_digital/%d/firma/revertir", diplomasCrudURL(), documentoID), payload, &result)
+	if status == 409 {
+		return nil, fmt.Errorf("%w: las firmas del diploma cambiaron o existe una firma posterior; actualice antes de revertir", ErrInvalidState)
+	}
+	if err != nil || status < 200 || status >= 300 {
+		return nil, fmt.Errorf("%w: diplomas_crud revertir firma status %d", ErrExternalService, status)
+	}
+	result.DocumentoID = documentoID
+	result.Orden = firmanteActivo.Orden
+	return &result, nil
 }
 
 func cloneMetadatos(input map[string]interface{}) map[string]interface{} {
@@ -413,7 +410,7 @@ func asignarRegistroDiplomaDigital(ctx context.Context, diplomaID int64) (*diplo
 	return &diploma, nil
 }
 
-func registrarFirmaDocumentoDiploma(ctx context.Context, documentoID int64, firmante *FirmanteActivo) (*firmaDocumentoResponse, error) {
+func registrarFirmaDocumentoDiploma(ctx context.Context, documentoID int64, firmante *FirmanteActivo, firmasEsperadas []int64, uuidDocumento ...string) (*firmaDocumentoResponse, error) {
 	estadoCodigo := "FIRMA_PAR"
 	if firmante.Orden >= 4 {
 		estadoCodigo = "FIRMADO"
@@ -434,6 +431,7 @@ func registrarFirmaDocumentoDiploma(ctx context.Context, documentoID int64, firm
 		firmaFirmanteID = &firmaFirmante.ID
 	}
 	payload := registrarFirmaDocumentoRequest{
+		FirmasEsperadas:    firmasEsperadas,
 		FirmaFirmanteID:    firmaFirmanteID,
 		RolFirmanteID:      int64(firmante.CargoID),
 		DocumentoIdentidad: firmante.DocumentoIdentidad,
@@ -441,6 +439,9 @@ func registrarFirmaDocumentoDiploma(ctx context.Context, documentoID int64, firm
 		Observacion:        fmt.Sprintf("Firma %s registrada en flujo de diploma", firmante.Rol),
 	}
 
+	if len(uuidDocumento) > 0 {
+		payload.UUIDDocumento = &uuidDocumento[0]
+	}
 	var firmaDocumento firmaDocumentoResponse
 	status, err := request.PostWithContext(
 		ctx,
@@ -448,6 +449,9 @@ func registrarFirmaDocumentoDiploma(ctx context.Context, documentoID int64, firm
 		payload,
 		&firmaDocumento,
 	)
+	if status == 409 {
+		return nil, fmt.Errorf("%w: las firmas del diploma cambiaron; actualice e intente nuevamente", ErrInvalidState)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: diplomas_crud registrar firma_documento status %d: %v", ErrExternalService, status, err)
 	}
@@ -458,7 +462,7 @@ func registrarFirmaDocumentoDiploma(ctx context.Context, documentoID int64, firm
 	return &firmaDocumento, nil
 }
 
-func validarFlujoFirmaDocumento(ctx context.Context, documentoID int64, firmante *FirmanteActivo) error {
+func validarFlujoFirmaDocumento(ctx context.Context, documentoID int64, firmante *FirmanteActivo, firmas []firmaDocumentoResponse) error {
 	if firmante == nil {
 		return fmt.Errorf("%w: firmante is required", ErrInvalidInput)
 	}
@@ -484,10 +488,6 @@ func validarFlujoFirmaDocumento(ctx context.Context, documentoID int64, firmante
 		return fmt.Errorf("%w: el documento ya esta firmado", ErrInvalidState)
 	}
 
-	firmas, err := listarFirmasDocumento(ctx, documentoID)
-	if err != nil {
-		return err
-	}
 	ordenesFirmadas := make(map[int]bool, len(firmas))
 	for _, firma := range firmas {
 		orden, ok := ordenRolFirmante(firma.RolFirmanteID)

@@ -244,11 +244,13 @@ type FirmaDiplomaResult struct {
 }
 
 type registrarFirmaDocumentoRequest struct {
-	FirmaFirmanteID    *int64 `json:"firma_firmante_id,omitempty"`
-	RolFirmanteID      int64  `json:"rol_firmante_id"`
-	DocumentoIdentidad int64  `json:"documento_identidad"`
-	EstadoFirmadoID    *int64 `json:"estado_firmado_id,omitempty"`
-	Observacion        string `json:"observacion,omitempty"`
+	UUIDDocumento      *string `json:"uuid_documento,omitempty"`
+	FirmasEsperadas    []int64 `json:"firmas_esperadas"`
+	FirmaFirmanteID    *int64  `json:"firma_firmante_id,omitempty"`
+	RolFirmanteID      int64   `json:"rol_firmante_id"`
+	DocumentoIdentidad int64   `json:"documento_identidad"`
+	EstadoFirmadoID    *int64  `json:"estado_firmado_id,omitempty"`
+	Observacion        string  `json:"observacion,omitempty"`
 }
 
 type firmaDocumentoResponse struct {
@@ -325,6 +327,7 @@ type TableroCeremoniasResult struct {
 }
 
 type CeremoniaFirmaEstudianteResumen struct {
+	PuedeRevertir             bool   `json:"puede_revertir"`
 	AsignacionID              int64  `json:"asignacion_id"`
 	DocumentoDigitalID        int64  `json:"documento_digital_id"`
 	CodigoEstudiante          int64  `json:"codigo_estudiante"`
