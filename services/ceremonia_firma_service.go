@@ -31,7 +31,7 @@ func (s CeremoniaService) ListarFirmas(ctx context.Context, ceremoniaID int64, i
 	if err != nil {
 		return nil, err
 	}
-	return construirCeremoniaFirmasResult(ctx, relacion, ordenSecretario)
+	return construirCeremoniaFirmasResult(ctx, relacion, ordenSecretario, secretario.DocumentoIdentidad)
 }
 
 func (s CeremoniaService) FirmarMasivamente(ctx context.Context, ceremoniaID int64, input *FirmaMasivaCeremoniaInput) (*FirmaMasivaCeremoniaResult, error) {
@@ -49,7 +49,7 @@ func (s CeremoniaService) FirmarMasivamente(ctx context.Context, ceremoniaID int
 	if err != nil {
 		return nil, err
 	}
-	firmas, err := construirCeremoniaFirmasResult(ctx, relacion, ordenSecretario)
+	firmas, err := construirCeremoniaFirmasResult(ctx, relacion, ordenSecretario, secretario.DocumentoIdentidad)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (s CeremoniaService) ListarFirmasDecano(ctx context.Context, ceremoniaID in
 	if err != nil {
 		return nil, err
 	}
-	return construirCeremoniaFirmasResult(ctx, relacion, ordenDecano)
+	return construirCeremoniaFirmasResult(ctx, relacion, ordenDecano, decano.DocumentoIdentidad)
 }
 
 func (s CeremoniaService) FirmarMasivamenteDecano(ctx context.Context, ceremoniaID int64, input *FirmaMasivaCeremoniaInput) (*FirmaMasivaCeremoniaResult, error) {
@@ -124,7 +124,7 @@ func (s CeremoniaService) FirmarMasivamenteDecano(ctx context.Context, ceremonia
 	if err != nil {
 		return nil, err
 	}
-	firmas, err := construirCeremoniaFirmasResult(ctx, relacion, ordenDecano)
+	firmas, err := construirCeremoniaFirmasResult(ctx, relacion, ordenDecano, decano.DocumentoIdentidad)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +219,7 @@ func (s CeremoniaService) listarFirmasGlobal(ctx context.Context, ceremoniaID in
 	if err != nil {
 		return nil, err
 	}
-	return construirCeremoniaFirmasResultRelaciones(ctx, relaciones, orden)
+	return construirCeremoniaFirmasResultRelaciones(ctx, relaciones, orden, documento)
 }
 
 func (s CeremoniaService) firmarMasivamenteGlobal(ctx context.Context, ceremoniaID int64, input *FirmaMasivaCeremoniaInput, rol string, orden int) (*FirmaMasivaCeremoniaResult, error) {
@@ -237,7 +237,7 @@ func (s CeremoniaService) firmarMasivamenteGlobal(ctx context.Context, ceremonia
 	if err != nil {
 		return nil, err
 	}
-	firmas, err := construirCeremoniaFirmasResultRelaciones(ctx, relaciones, orden)
+	firmas, err := construirCeremoniaFirmasResultRelaciones(ctx, relaciones, orden, documento)
 	if err != nil {
 		return nil, err
 	}
@@ -303,12 +303,12 @@ func (s CeremoniaService) relacionesCeremoniaGlobal(ctx context.Context, ceremon
 	return result, nil
 }
 
-func construirCeremoniaFirmasResultRelaciones(ctx context.Context, relaciones []ceremoniaFacultadProgramaCRUDResponse, ordenFirma int) (*CeremoniaFirmasResult, error) {
+func construirCeremoniaFirmasResultRelaciones(ctx context.Context, relaciones []ceremoniaFacultadProgramaCRUDResponse, ordenFirma int, documentoFirmante ...int64) (*CeremoniaFirmasResult, error) {
 	result := &CeremoniaFirmasResult{Estudiantes: []CeremoniaFirmaEstudianteResumen{}}
 	vistos := map[int64]struct{}{}
 	for _, relacion := range relaciones {
 		relacion := relacion
-		detalle, err := construirCeremoniaFirmasResult(ctx, &relacion, ordenFirma)
+		detalle, err := construirCeremoniaFirmasResult(ctx, &relacion, ordenFirma, documentoFirmante...)
 		if err != nil {
 			return nil, err
 		}
@@ -403,7 +403,7 @@ func resumenErroresFirmaMasiva(items []FirmaMasivaCeremoniaItem) string {
 	return strings.Join(errores, " ")
 }
 
-func construirCeremoniaFirmasResult(ctx context.Context, relacion *ceremoniaFacultadProgramaCRUDResponse, ordenFirma int) (*CeremoniaFirmasResult, error) {
+func construirCeremoniaFirmasResult(ctx context.Context, relacion *ceremoniaFacultadProgramaCRUDResponse, ordenFirma int, documentoFirmante ...int64) (*CeremoniaFirmasResult, error) {
 	if relacion == nil || relacion.CeremoniaGrado == nil {
 		return nil, fmt.Errorf("%w: ceremonia no encontrada", ErrInvalidInput)
 	}
@@ -494,6 +494,9 @@ func construirCeremoniaFirmasResult(ctx context.Context, relacion *ceremoniaFacu
 		firmas, err := listarFirmasDocumento(ctx, doc.ID)
 		if err != nil {
 			return nil, err
+		}
+		if len(documentoFirmante) > 0 && ordenFirma < ordenRector && (doc.UUIDDocumento == nil || *doc.UUIDDocumento == "") {
+			item.PuedeRevertir = validarReversionFirma(firmas, ordenFirma, documentoFirmante[0]) == nil
 		}
 		ordenesFirmadas := map[int]bool{}
 		for _, firma := range firmas {

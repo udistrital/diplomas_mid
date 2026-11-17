@@ -3604,6 +3604,7 @@
         "firma_rector": {
           "type": "boolean"
         },
+        "puede_revertir": {"type": "boolean", "description": "Permite revertir firma propia si no existen firmas posteriores ni finalización."},
         "puede_firmar": {
           "type": "boolean"
         },
