@@ -24,7 +24,7 @@ func (c *CeremoniaController) writeFirmaMasiva(result *services.FirmaMasivaCerem
 
 func (c *CeremoniaController) Listar() {
 	documento, _ := strconv.ParseInt(c.GetString("documento_identidad_secretario"), 10, 64)
-	result, err := c.Service.Listar(c.requestContext(), &services.ListarCeremoniasInput{PeriodoID: periodoQuery(c.GetString("periodo_id")), DocumentoIdentidadSecretario: documento})
+	result, err := c.Service.Listar(c.requestContext(), &services.ListarCeremoniasInput{PeriodoID: periodoQuery(c.GetString("periodo_id")), DocumentoIdentidadSecretario: documento, IncluirResumenFirmas: c.GetString("resumen_firmas") == "true"})
 	if err != nil {
 		c.writeError(mapServiceError(err), err)
 		return
@@ -63,7 +63,7 @@ func (c *CeremoniaController) GuardarParametrizacionRegistro() {
 
 func (c *CeremoniaController) ListarDecano() {
 	documento, _ := strconv.ParseInt(c.GetString("documento_identidad_decano"), 10, 64)
-	result, err := c.Service.ListarDecano(c.requestContext(), &services.ListarCeremoniasInput{DocumentoIdentidadSecretario: documento})
+	result, err := c.Service.ListarDecano(c.requestContext(), &services.ListarCeremoniasInput{DocumentoIdentidadSecretario: documento, PeriodoID: periodoQuery(c.GetString("periodo_id")), IncluirResumenFirmas: c.GetString("resumen_firmas") == "true"})
 	if err != nil {
 		c.writeError(mapServiceError(err), err)
 		return

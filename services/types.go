@@ -263,6 +263,7 @@ type firmaDocumentoResponse struct {
 }
 
 type ListarCeremoniasInput struct {
+	IncluirResumenFirmas         bool  `json:"resumen_firmas,omitempty"`
 	PeriodoID                    int64 `json:"periodo_id"`
 	DocumentoIdentidadSecretario int64 `json:"documento_identidad_secretario"`
 	DocumentoIdentidadFirmante   int64 `json:"documento_identidad_firmante,omitempty"`
@@ -281,22 +282,32 @@ type EliminarCeremoniaInput struct {
 	DocumentoIdentidadSecretario int64 `json:"documento_identidad_secretario"`
 }
 
+// ResumenFirmasCeremonia cuenta diplomas habilitados para la etapa del actor.
+// No representa cupos físicos ni altera las reglas de firma o reversión.
+type ResumenFirmasCeremonia struct {
+	Orden      int `json:"orden"`
+	Total      int `json:"total"`
+	Firmados   int `json:"firmados"`
+	Pendientes int `json:"pendientes"`
+}
+
 type CeremoniaResumen struct {
-	PeriodoID                     int64  `json:"periodo_id"`
-	ID                            int64  `json:"id"`
-	RelacionID                    int64  `json:"relacion_id"`
-	FacultadID                    int64  `json:"facultad_id"`
-	FechaCeremonia                string `json:"fecha_ceremonia"`
-	Lugar                         string `json:"lugar"`
-	CantidadEstudiantesProgramada int    `json:"cantidad_estudiantes_programada"`
-	CuposAsignados                int    `json:"cupos_asignados"`
-	CuposDisponibles              int    `json:"cupos_disponibles"`
-	EstadoFlujo                   string `json:"estado_flujo"`
-	PuedeEditar                   bool   `json:"puede_editar"`
-	PuedeEliminar                 bool   `json:"puede_eliminar"`
-	MotivoBloqueo                 string `json:"motivo_bloqueo,omitempty"`
-	Observacion                   string `json:"observacion,omitempty"`
-	Activo                        bool   `json:"activo"`
+	ResumenFirmas                 *ResumenFirmasCeremonia `json:"resumen_firmas,omitempty"`
+	PeriodoID                     int64                   `json:"periodo_id"`
+	ID                            int64                   `json:"id"`
+	RelacionID                    int64                   `json:"relacion_id"`
+	FacultadID                    int64                   `json:"facultad_id"`
+	FechaCeremonia                string                  `json:"fecha_ceremonia"`
+	Lugar                         string                  `json:"lugar"`
+	CantidadEstudiantesProgramada int                     `json:"cantidad_estudiantes_programada"`
+	CuposAsignados                int                     `json:"cupos_asignados"`
+	CuposDisponibles              int                     `json:"cupos_disponibles"`
+	EstadoFlujo                   string                  `json:"estado_flujo"`
+	PuedeEditar                   bool                    `json:"puede_editar"`
+	PuedeEliminar                 bool                    `json:"puede_eliminar"`
+	MotivoBloqueo                 string                  `json:"motivo_bloqueo,omitempty"`
+	Observacion                   string                  `json:"observacion,omitempty"`
+	Activo                        bool                    `json:"activo"`
 }
 
 type ProgramaAprobadoResumen struct {
