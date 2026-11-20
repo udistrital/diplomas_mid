@@ -100,6 +100,9 @@ func (s CeremoniaService) Listar(ctx context.Context, input *ListarCeremoniasInp
 	if err != nil {
 		return nil, err
 	}
+	if input.IncluirResumenFirmas {
+		return s.tableroFirmasFacultad(ctx, secretario.FacultadID, ordenSecretario, input.PeriodoID)
+	}
 	return s.listarPorFacultad(ctx, secretario.FacultadID, input.PeriodoID > 0, input.PeriodoID)
 }
 
@@ -194,6 +197,9 @@ func (s CeremoniaService) ListarDecano(ctx context.Context, input *ListarCeremon
 	decano, err := s.decanoAutorizado(ctx, input.DocumentoIdentidadSecretario)
 	if err != nil {
 		return nil, err
+	}
+	if input.IncluirResumenFirmas {
+		return s.tableroFirmasFacultad(ctx, decano.FacultadID, ordenDecano, input.PeriodoID)
 	}
 	return s.listarPorFacultad(ctx, decano.FacultadID, false)
 }

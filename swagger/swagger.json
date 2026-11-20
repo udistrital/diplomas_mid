@@ -857,6 +857,14 @@
             "required": false,
             "type": "integer",
             "description": "Periodo id."
+          },
+          {
+            "name": "resumen_firmas",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "default": false,
+            "description": "Incluir conteos de firma del actor sin consultar aprobados ni enriquecer estudiantes."
           }
         ],
         "responses": {
@@ -1187,6 +1195,21 @@
             "required": false,
             "type": "integer",
             "description": "Documento identidad decano."
+          },
+          {
+            "name": "periodo_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Período académico del resumen de firmas."
+          },
+          {
+            "name": "resumen_firmas",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "default": false,
+            "description": "Incluir conteos de firma del actor sin consultar aprobados ni enriquecer estudiantes."
           }
         ],
         "responses": {
@@ -3299,6 +3322,9 @@
         },
         "activo": {
           "type": "boolean"
+        },
+        "resumen_firmas": {
+          "$ref": "#/definitions/ResumenFirmasCeremonia"
         }
       }
     },
@@ -3604,7 +3630,10 @@
         "firma_rector": {
           "type": "boolean"
         },
-        "puede_revertir": {"type": "boolean", "description": "Permite revertir firma propia si no existen firmas posteriores ni finalización."},
+        "puede_revertir": {
+          "type": "boolean",
+          "description": "Permite revertir firma propia si no existen firmas posteriores ni finalización."
+        },
         "puede_firmar": {
           "type": "boolean"
         },
@@ -3773,6 +3802,30 @@
       "properties": {
         "message": {
           "type": "string"
+        }
+      }
+    },
+    "ResumenFirmasCeremonia": {
+      "type": "object",
+      "description": "Conteos de diplomas con firmas previas requeridas, deduplicados por documento. Orden identifica la etapa del actor; total es firmados más pendientes. Sin lecturas de PDF ni S3. El CRUD actual requiere una consulta de firmas por documento distinto.",
+      "required": [
+        "orden",
+        "total",
+        "firmados",
+        "pendientes"
+      ],
+      "properties": {
+        "orden": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "firmados": {
+          "type": "integer"
+        },
+        "pendientes": {
+          "type": "integer"
         }
       }
     }

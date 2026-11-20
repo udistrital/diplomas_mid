@@ -576,6 +576,12 @@ paths:
         required: false
         type: integer
         description: Periodo id.
+      - name: resumen_firmas
+        in: query
+        required: false
+        type: boolean
+        default: false
+        description: Incluir conteos de firma del actor sin consultar aprobados ni enriquecer estudiantes.
       responses:
         '200':
           description: Operación exitosa.
@@ -795,6 +801,17 @@ paths:
         required: false
         type: integer
         description: Documento identidad decano.
+      - name: periodo_id
+        in: query
+        required: false
+        type: integer
+        description: Período académico del resumen de firmas.
+      - name: resumen_firmas
+        in: query
+        required: false
+        type: boolean
+        default: false
+        description: Incluir conteos de firma del actor sin consultar aprobados ni enriquecer estudiantes.
       responses:
         '200':
           description: Operación exitosa.
@@ -2173,9 +2190,28 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/ProgramaAprobadoResumen'
+  ResumenFirmasCeremonia:
+    type: object
+    description: Conteos de diplomas con firmas previas requeridas, deduplicados por documento. Orden identifica la etapa del actor; total es firmados más pendientes. Sin lecturas de PDF ni S3. El CRUD actual requiere una consulta de firmas por documento distinto.
+    required:
+    - orden
+    - total
+    - firmados
+    - pendientes
+    properties:
+      orden:
+        type: integer
+      total:
+        type: integer
+      firmados:
+        type: integer
+      pendientes:
+        type: integer
   CeremoniaResumen:
     type: object
     properties:
+      resumen_firmas:
+        $ref: '#/definitions/ResumenFirmasCeremonia'
       periodo_id:
         type: integer
         format: int64

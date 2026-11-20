@@ -272,6 +272,7 @@ func (s CeremoniaService) tableroFirmasGlobal(ctx context.Context, orden int) (*
 			continue
 		}
 		resumen := detalle.Ceremonia
+		resumen.ResumenFirmas = &ResumenFirmasCeremonia{Orden: orden, Total: detalle.Total, Firmados: detalle.Firmados, Pendientes: detalle.Pendientes}
 		resumen.CuposAsignados = detalle.Total
 		resumen.CuposDisponibles = detalle.Pendientes
 		resumen.PuedeEditar = false
