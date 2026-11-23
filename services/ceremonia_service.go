@@ -6,24 +6,12 @@ import (
 	"net/url"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/udistrital/utils_oas/v2/request"
 )
 
 type CeremoniaService struct{}
-
-type programasAprobadosCacheEntry struct {
-	programas []ProgramaAprobadoResumen
-	total     int
-	expira    time.Time
-}
-
-var programasAprobadosCache = struct {
-	sync.RWMutex
-	items map[[2]int64]programasAprobadosCacheEntry
-}{items: map[[2]int64]programasAprobadosCacheEntry{}}
 
 func (s CeremoniaService) Crear(ctx context.Context, input *CrearCeremoniaInput) (*CrearCeremoniaResult, error) {
 	if err := validarCeremonia(input); err != nil {
@@ -789,14 +777,7 @@ func consultarEstudiantesAprobadosPorFacultadLigero(ctx context.Context, faculta
 }
 
 func programasAprobadosResumen(ctx context.Context, facultadID, periodoID int64) ([]ProgramaAprobadoResumen, int, error) {
-	key := [2]int64{periodoID, facultadID}
-	programasAprobadosCache.RLock()
-	entry, ok := programasAprobadosCache.items[key]
-	programasAprobadosCache.RUnlock()
-	if ok && time.Now().Before(entry.expira) {
-		return entry.programas, entry.total, nil
-	}
-
+	// El conteo debe usar la misma fuente actual que el detalle del programa.
 	estudiantes, err := consultarEstudiantesAprobadosPorFacultadLigero(ctx, facultadID, periodoID)
 	if err != nil {
 		return nil, 0, err
@@ -823,9 +804,6 @@ func programasAprobadosResumen(ctx context.Context, facultadID, periodoID int64)
 		}
 		programas = append(programas, ProgramaAprobadoResumen{PeriodoID: periodoID, ProgramaAcademicoID: id, Nombre: nombre, Cantidad: conteo[id]})
 	}
-	programasAprobadosCache.Lock()
-	programasAprobadosCache.items[key] = programasAprobadosCacheEntry{programas: programas, total: total, expira: time.Now().Add(5 * time.Minute)}
-	programasAprobadosCache.Unlock()
 	return programas, total, nil
 }
 

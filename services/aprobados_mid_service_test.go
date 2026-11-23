@@ -140,21 +140,33 @@ func TestMIDVacioCancelacionYPeriodoObligatorio(t *testing.T) {
 	}
 }
 
-func TestCacheAprobadosPorPeriodo(t *testing.T) {
-	mockAprobados(t, 1, nil)
-	programasAprobadosCache.Lock()
-	programasAprobadosCache.items = map[[2]int64]programasAprobadosCacheEntry{}
-	programasAprobadosCache.Unlock()
-	// Seed dependency names to avoid unrelated name endpoint.
-	for _, periodo := range []int64{77, 75} {
-		if _, _, err := programasAprobadosResumen(context.Background(), 14, periodo); err != nil {
-			t.Fatal(err)
+func TestResumenAprobadosConsultaDatosActualesPorPeriodoYFacultad(t *testing.T) {
+	llamadas := 0
+	mockAprobados(t, 20, func(r *http.Request, response map[string]interface{}) {
+		llamadas++
+		data := response["Data"].(map[string]interface{})
+		if llamadas > 1 {
+			data["Solicitudes"] = data["Solicitudes"].([]interface{})[:2]
+			data["Total"] = 2
+		}
+	})
+	for i, want := range []int{20, 2} {
+		programas, total, err := programasAprobadosResumen(context.Background(), 14, 77)
+		if err != nil || total != want || len(programas) != 1 || programas[0].Cantidad != want {
+			t.Fatalf("consulta %d: total=%d programas=%+v error=%v", i, total, programas, err)
 		}
 	}
-	programasAprobadosCache.RLock()
-	defer programasAprobadosCache.RUnlock()
-	if len(programasAprobadosCache.items) != 2 {
-		t.Fatal("cache crossed periods")
+	detalle, err := consultarEstudiantesAprobadosPorFacultadLigero(context.Background(), 14, 77)
+	if err != nil || len(detalle) != 2 {
+		t.Fatalf("detalle=%+v error=%v", detalle, err)
+	}
+	programas, total, err := programasAprobadosResumen(context.Background(), 17, 77)
+	if err != nil || total != 0 || len(programas) != 0 {
+		t.Fatalf("otra facultad: total=%d programas=%+v error=%v", total, programas, err)
+	}
+	programas, total, err = programasAprobadosResumen(context.Background(), 14, 75)
+	if err != nil || total != 2 || len(programas) != 1 || programas[0].PeriodoID != 75 {
+		t.Fatalf("otro período: total=%d programas=%+v error=%v", total, programas, err)
 	}
 }
 
