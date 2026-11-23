@@ -270,12 +270,25 @@ func TestAsignacionRechazaPeriodoAjenoAntesDeConsultarAprobados(t *testing.T) {
 	}
 }
 
-func TestPendientesNoCruzaProgramaEntrePeriodos(t *testing.T) {
-	aprobados := []ProgramaAprobadoResumen{{PeriodoID: 77, ProgramaAcademicoID: 72, Cantidad: 1}, {PeriodoID: 79, ProgramaAcademicoID: 72, Cantidad: 2}}
-	asignados := []ProgramaAprobadoResumen{{PeriodoID: 79, ProgramaAcademicoID: 72, Cantidad: 2}}
-	pendientes := programasPendientes(aprobados, asignados)
-	if len(pendientes) != 1 || pendientes[0].PeriodoID != 77 {
-		t.Fatalf("períodos mezclados: %+v", pendientes)
+func TestPendientesDistingueEstudiantesDelMismoProgramaYPeriodo(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query().Get("query")
+		if strings.Contains(query, "codigo_estudiante:20142005018,") && strings.Contains(query, "periodo_id:77,") {
+			w.Write([]byte(`[{"id":1,"activo":true}]`))
+		} else {
+			w.Write([]byte(`[]`))
+		}
+	}))
+	defer server.Close()
+	configReporteTest(t, "DiplomasCrudURL", server.URL)
+	estudiantes := []EstudianteAprobadoGrado{
+		{CodigoEstudiante: 20142005018, PeriodoID: 77, IDProyectoOikos: 74},
+		{CodigoEstudiante: 20142005019, PeriodoID: 77, IDProyectoOikos: 74},
+		{CodigoEstudiante: 20142005018, PeriodoID: 79, IDProyectoOikos: 74},
+	}
+	pendientes, err := filtrarEstudiantesSinAsignacion(t.Context(), estudiantes)
+	if err != nil || len(pendientes) != 2 || pendientes[0].CodigoEstudiante != 20142005019 || pendientes[1].PeriodoID != 79 {
+		t.Fatalf("pendientes=%+v error=%v", pendientes, err)
 	}
 }
 
@@ -302,7 +315,11 @@ func TestAsignarSoloEstudiantesDelPeriodoDeCeremonia(t *testing.T) {
 			w.Write([]byte(`[{"id":1,"activo":true,"facultad_id":14,"cantidad_estudiantes_programada":5,"ceremonia_grado":{"id":99,"periodo_id":77,"fecha_ceremonia":"2026-11-20T00:00:00Z","activo":true}}]`))
 		case "/v1/ceremonia_estudiante/":
 			if r.Method == http.MethodGet {
-				w.Write([]byte(`[]`))
+				if r.URL.Query().Get("query") == "ceremonia_facultad_programa_id:1,activo:true" {
+					w.Write([]byte(`[{"id":10,"activo":true,"documento_digital":{"id":499,"codigo_estudiante":2024999,"programa_academico_id":275,"periodo_id":77,"uuid_documento":"firmado-original"}}]`))
+				} else {
+					w.Write([]byte(`[]`))
+				}
 				return
 			}
 			var body ceremoniaEstudianteCRUDRequest

@@ -259,11 +259,16 @@ func (s CeremoniaService) listarPorFacultad(ctx context.Context, facultadID int6
 	}
 	aplicarBloqueosCeremonias(result.Ceremonias, result.AsignadosProgramas)
 	if incluirProgramas {
-		result.AprobadosProgramas, result.AprobadosTotal, err = programasAprobadosResumen(ctx, facultadID, periodoID)
-		if err != nil {
-			return nil, err
+		estudiantes, consultaErr := consultarEstudiantesAprobadosPorFacultadLigero(ctx, facultadID, periodoID)
+		if consultaErr != nil {
+			return nil, consultaErr
 		}
-		result.PendientesProgramas = programasPendientes(result.AprobadosProgramas, result.AsignadosProgramas)
+		result.AprobadosProgramas, result.AprobadosTotal = resumirProgramasAprobados(ctx, estudiantes, facultadID, periodoID)
+		pendientes, consultaErr := filtrarEstudiantesSinAsignacion(ctx, estudiantes)
+		if consultaErr != nil {
+			return nil, consultaErr
+		}
+		result.PendientesProgramas, _ = resumirProgramasAprobados(ctx, pendientes, facultadID, periodoID)
 	}
 	return &result, nil
 }
@@ -443,11 +448,11 @@ func (s CeremoniaService) AsignarEstudiantes(ctx context.Context, ceremoniaID in
 	}
 	totalSolicitado := 0
 	for programaID := range programas {
-		if yaAsignado, err := programaAsignadoEnFacultad(ctx, secretario.FacultadID, programaID, input.PeriodoID); err != nil {
+		pendientes, err := filtrarEstudiantesSinAsignacion(ctx, estudiantesPorPrograma[programaID])
+		if err != nil {
 			return nil, err
-		} else if yaAsignado {
-			return nil, fmt.Errorf("%w: el programa %d ya esta asignado a una ceremonia", ErrInvalidState, programaID)
 		}
+		estudiantesPorPrograma[programaID] = pendientes
 		cantidad := len(estudiantesPorPrograma[programaID])
 		if cantidad == 0 {
 			return nil, fmt.Errorf("%w: el programa %d no tiene estudiantes pendientes", ErrInvalidInput, programaID)
@@ -456,13 +461,7 @@ func (s CeremoniaService) AsignarEstudiantes(ctx context.Context, ceremoniaID in
 			if estudiante.PeriodoID != input.PeriodoID {
 				return nil, fmt.Errorf("%w: estudiante pertenece a otro período", ErrInvalidState)
 			}
-			yaAsignado, err := estudianteAsignadoEnPeriodo(ctx, estudiante.CodigoEstudiante, input.PeriodoID)
-			if err != nil {
-				return nil, err
-			}
-			if yaAsignado {
-				return nil, fmt.Errorf("%w: estudiante %d ya está asignado en período %d", ErrInvalidState, estudiante.CodigoEstudiante, input.PeriodoID)
-			}
+
 		}
 
 		totalSolicitado += cantidad
@@ -586,6 +585,13 @@ func (s CeremoniaService) EstudiantesPrograma(ctx context.Context, input *Estudi
 		if estudiante.IDProyectoOikos != input.ProgramaAcademicoID {
 			continue
 		}
+		asignado, err := estudianteAsignadoEnPeriodo(ctx, estudiante.CodigoEstudiante, input.PeriodoID)
+		if err != nil {
+			return nil, err
+		}
+		if asignado {
+			continue
+		}
 		enriquecido, err := enriquecerEstudianteAprobado(ctx, estudiante)
 		if err != nil {
 			// La vista de asignación no debe quedar bloqueada porque un estudiante
@@ -633,28 +639,6 @@ func listarAsignacionesRelacion(ctx context.Context, relacionID int64) ([]ceremo
 		return nil, fmt.Errorf("%w: diplomas_crud ceremonia_estudiante returned status %d", ErrExternalService, status)
 	}
 	return asignados, nil
-}
-
-func programaAsignadoEnFacultad(ctx context.Context, facultadID int64, programaID int64, periodoID int64) (bool, error) {
-	relaciones, err := (CeremoniaService{}).listarRelacionesFacultad(ctx, facultadID)
-	if err != nil {
-		return false, err
-	}
-	for _, relacion := range relaciones {
-		if relacion.CeremoniaGrado == nil || relacion.CeremoniaGrado.PeriodoID != periodoID {
-			continue
-		}
-		asignaciones, err := listarAsignacionesRelacion(ctx, relacion.ID)
-		if err != nil {
-			return false, err
-		}
-		for _, asignacion := range asignaciones {
-			if asignacion.DocumentoDigital != nil && asignacion.DocumentoDigital.ProgramaAcademicoID != nil && *asignacion.DocumentoDigital.ProgramaAcademicoID == programaID {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
 }
 
 func crearAsignacionCeremoniaEstudiante(ctx context.Context, relacionID int64, documentoID int64) (bool, error) {
@@ -782,6 +766,11 @@ func programasAprobadosResumen(ctx context.Context, facultadID, periodoID int64)
 	if err != nil {
 		return nil, 0, err
 	}
+	programas, total := resumirProgramasAprobados(ctx, estudiantes, facultadID, periodoID)
+	return programas, total, nil
+}
+
+func resumirProgramasAprobados(ctx context.Context, estudiantes []EstudianteAprobadoGrado, facultadID, periodoID int64) ([]ProgramaAprobadoResumen, int) {
 	conteo := map[int64]int{}
 	total := 0
 	for _, estudiante := range estudiantes {
@@ -804,7 +793,7 @@ func programasAprobadosResumen(ctx context.Context, facultadID, periodoID int64)
 		}
 		programas = append(programas, ProgramaAprobadoResumen{PeriodoID: periodoID, ProgramaAcademicoID: id, Nombre: nombre, Cantidad: conteo[id]})
 	}
-	return programas, total, nil
+	return programas, total
 }
 
 type estadoFlujoPrograma struct {
@@ -933,19 +922,20 @@ func programasAsignadosResumen(ctx context.Context, relaciones []ceremoniaFacult
 	return result, nil
 }
 
-func programasPendientes(aprobados []ProgramaAprobadoResumen, asignados []ProgramaAprobadoResumen) []ProgramaAprobadoResumen {
-	asignadosMap := map[[2]int64]struct{}{}
-	for _, item := range asignados {
-		asignadosMap[[2]int64{item.PeriodoID, item.ProgramaAcademicoID}] = struct{}{}
-	}
-	pendientes := make([]ProgramaAprobadoResumen, 0, len(aprobados))
-	for _, item := range aprobados {
-		if _, ok := asignadosMap[[2]int64{item.PeriodoID, item.ProgramaAcademicoID}]; ok {
-			continue
+// Un programa puede tener asignados y nuevos aprobados simultáneamente.
+// No se resta por conteos: se comprueba la identidad del estudiante en su período.
+func filtrarEstudiantesSinAsignacion(ctx context.Context, estudiantes []EstudianteAprobadoGrado) ([]EstudianteAprobadoGrado, error) {
+	pendientes := make([]EstudianteAprobadoGrado, 0, len(estudiantes))
+	for _, estudiante := range estudiantes {
+		asignado, err := estudianteAsignadoEnPeriodo(ctx, estudiante.CodigoEstudiante, estudiante.PeriodoID)
+		if err != nil {
+			return nil, err
 		}
-		pendientes = append(pendientes, item)
+		if !asignado {
+			pendientes = append(pendientes, estudiante)
+		}
 	}
-	return pendientes
+	return pendientes, nil
 }
 
 func (s CeremoniaService) rollbackCeremonia(ctx context.Context, ceremoniaID int64, relaciones []ceremoniaFacultadProgramaCRUDResponse) {
