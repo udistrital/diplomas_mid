@@ -361,26 +361,39 @@ func (s CeremoniaService) Eliminar(ctx context.Context, id int64, input *Elimina
 	if err != nil {
 		return err
 	}
-	asignaciones, err := listarAsignacionesRelacion(ctx, relacion.ID)
-	if err != nil {
-		return err
-	}
-	if len(asignaciones) > 0 {
-		return fmt.Errorf("%w: no se puede eliminar una ceremonia con estudiantes asignados", ErrInvalidState)
-	}
-	status, err := request.DeleteWithContext(ctx, fmt.Sprintf("%s/ceremonia_facultad_programa/%d", diplomasCrudURL(), relacion.ID), nil)
+	// La ceremonia puede tener varias relaciones, incluso de otras facultades.
+	// Revisarlas antes de modificar cualquiera evita una inactivación parcial.
+	endpoint := fmt.Sprintf("%s/ceremonia_facultad_programa/?query=%s&limit=-1", diplomasCrudURL(), url.QueryEscape(fmt.Sprintf("CeremoniaGrado__Id:%d", id)))
+	var relaciones []ceremoniaFacultadProgramaCRUDResponse
+	status, err := request.GetWithContext(ctx, endpoint, &relaciones)
 	if err != nil || status < 200 || status >= 300 {
-		if err != nil {
-			return fmt.Errorf("%w: diplomas_crud ceremonia_facultad_programa delete status %d: %v", ErrExternalService, status, err)
-		}
-		return fmt.Errorf("%w: diplomas_crud ceremonia_facultad_programa delete returned status %d", ErrExternalService, status)
+		return fmt.Errorf("%w: consultar relaciones de ceremonia status %d: %v", ErrExternalService, status, err)
 	}
+	for _, item := range relaciones {
+		asignaciones, err := listarAsignacionesRelacion(ctx, item.ID)
+		if err != nil {
+			return err
+		}
+		if len(asignaciones) > 0 {
+			return fmt.Errorf("%w: no se puede inactivar una ceremonia con estudiantes asignados", ErrInvalidState)
+		}
+	}
+	// Inactivar primero la ceremonia: la transacción del CRUD cierra la carrera con
+	// nuevas asignaciones antes de inactivar la relación de esta facultad.
+	// DELETE devuelve 204 sin cuerpo: no exigir decodificación JSON de utils_oas.
 	status, err = request.DeleteWithContext(ctx, fmt.Sprintf("%s/ceremonia_grado/%d", diplomasCrudURL(), id), nil)
-	if err != nil || status < 200 || status >= 300 {
-		if err != nil {
-			return fmt.Errorf("%w: diplomas_crud ceremonia_grado delete status %d: %v", ErrExternalService, status, err)
-		}
-		return fmt.Errorf("%w: diplomas_crud ceremonia_grado delete returned status %d", ErrExternalService, status)
+	if status == 409 {
+		return fmt.Errorf("%w: no se puede inactivar una ceremonia con estudiantes asignados; actualice la información", ErrInvalidState)
+	}
+	if (err != nil && status != 204) || status < 200 || status >= 300 {
+		return fmt.Errorf("%w: diplomas_crud ceremonia_grado delete status %d: %v", ErrExternalService, status, err)
+	}
+	status, err = request.DeleteWithContext(ctx, fmt.Sprintf("%s/ceremonia_facultad_programa/%d", diplomasCrudURL(), relacion.ID), nil)
+	if status == 409 {
+		return fmt.Errorf("%w: la relación tiene estudiantes asignados; actualice la información", ErrInvalidState)
+	}
+	if (err != nil && status != 204) || status < 200 || status >= 300 {
+		return fmt.Errorf("%w: diplomas_crud ceremonia_facultad_programa delete status %d: %v", ErrExternalService, status, err)
 	}
 	return nil
 }
