@@ -38,6 +38,8 @@ type RegistroControlCeremonia struct {
 type diplomaZIPItem struct {
 	FacultadID, CeremoniaID, Codigo int64
 	FechaCeremonia, UUID            string
+	Lugar                           string
+	Documento                       *documentoDigitalResponse
 }
 
 func (DiplomasZIPService) Catalogo(ctx context.Context) (*RegistroControlCatalogo, error) {
@@ -98,7 +100,7 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 	items := make([]diplomaZIPItem, 0)
 	vistos := map[int64]struct{}{}
 	for _, relacion := range relaciones {
-		if relacion.CeremoniaGrado == nil || (input.CeremoniaID > 0 && relacion.CeremoniaGrado.ID != input.CeremoniaID) || (input.FacultadID > 0 && relacion.FacultadID != input.FacultadID) {
+		if relacion.CeremoniaGrado == nil || !relacion.Activo || !relacion.CeremoniaGrado.Activo || (input.CeremoniaID > 0 && relacion.CeremoniaGrado.ID != input.CeremoniaID) || (input.FacultadID > 0 && relacion.FacultadID != input.FacultadID) {
 			continue
 		}
 		asignaciones, err := listarAsignacionesRelacion(ctx, relacion.ID)
@@ -114,7 +116,9 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 				continue
 			}
 			vistos[doc.ID] = struct{}{}
-			items = append(items, diplomaZIPItem{relacion.FacultadID, relacion.CeremoniaGrado.ID, doc.CodigoEstudiante, relacion.CeremoniaGrado.FechaCeremonia, strings.TrimSpace(*doc.UUIDDocumento)})
+			items = append(items, diplomaZIPItem{FacultadID: relacion.FacultadID, CeremoniaID: relacion.CeremoniaGrado.ID,
+				Codigo: doc.CodigoEstudiante, FechaCeremonia: relacion.CeremoniaGrado.FechaCeremonia,
+				UUID: strings.TrimSpace(*doc.UUIDDocumento), Lugar: relacion.CeremoniaGrado.Lugar, Documento: doc})
 		}
 	}
 	if len(items) == 0 {
@@ -143,6 +147,11 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 		}
 		return items[i].Codigo < items[j].Codigo
 	})
+	verificaciones, err := consultarVerificacionesReporte(ctx, items)
+	if err != nil {
+		return nil, err
+	}
+	filas := make([][]string, 0, len(items))
 	client, err := nuevoClienteS3(ctx)
 	if err != nil {
 		return nil, err
@@ -150,6 +159,10 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 	var output bytes.Buffer
 	zw := zip.NewWriter(&output)
 	for _, item := range items {
+		diploma, err := buscarDiplomaDigitalExistente(ctx, item.Documento.ID)
+		if err != nil {
+			return nil, err
+		}
 		key := archivosS3[item.UUID]
 		object, err := client.GetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(diplomasS3Bucket()), Key: aws.String(key)})
 		if err != nil {
@@ -163,6 +176,18 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 		if closeErr != nil {
 			return nil, closeErr
 		}
+		filas = append(filas, filaReporteDiploma(ctx, item, diploma, verificaciones[item.UUID]))
+	}
+	reporte, err := crearReporteDiplomasExcel(filas)
+	if err != nil {
+		return nil, err
+	}
+	entry, err := zw.Create("reporte_diplomas.xlsx")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := entry.Write(reporte); err != nil {
+		return nil, err
 	}
 	if err := zw.Close(); err != nil {
 		return nil, err
@@ -198,16 +223,13 @@ func listarDiplomasOriginalesS3(ctx context.Context) (map[string]string, error) 
 	return archivos, nil
 }
 
-func escribirDiplomaZIP(zw *zip.Writer, item diplomaZIPItem, contenido io.Reader) error {
+func rutaDiplomaZIP(item diplomaZIPItem) string {
 	fecha := normalizarFechaZIP(item.FechaCeremonia)
-	entry, err := zw.Create(fmt.Sprintf(
-		"Facultad_%d/Ceremonia_%s_%d/%s_Diploma_%d.pdf",
-		item.FacultadID,
-		fecha,
-		item.CeremoniaID,
-		fecha,
-		item.Codigo,
-	))
+	return fmt.Sprintf("Facultad_%d/Ceremonia_%s_%d/%s_Diploma_%d.pdf", item.FacultadID, fecha, item.CeremoniaID, fecha, item.Codigo)
+}
+
+func escribirDiplomaZIP(zw *zip.Writer, item diplomaZIPItem, contenido io.Reader) error {
+	entry, err := zw.Create(rutaDiplomaZIP(item))
 	if err != nil {
 		return err
 	}

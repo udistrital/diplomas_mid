@@ -577,7 +577,7 @@
         "tags": [
           "diplomas"
         ],
-        "summary": "Descargar",
+        "summary": "Descargar diplomas y reporte Excel",
         "operationId": "DiplomasZIPController_Descargar",
         "parameters": [
           {
@@ -597,7 +597,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Operación exitosa.",
+            "description": "ZIP con PDF originales y reporte_diplomas.xlsx con metadatos y enlaces de verificación QR.",
             "schema": {
               "type": "file"
             }
