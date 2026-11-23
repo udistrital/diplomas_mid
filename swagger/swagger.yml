@@ -388,7 +388,7 @@ paths:
     get:
       tags:
       - diplomas
-      summary: Descargar
+      summary: Descargar diplomas y reporte Excel
       operationId: DiplomasZIPController_Descargar
       parameters:
       - name: ceremonia_id
@@ -403,7 +403,7 @@ paths:
         description: Facultad id.
       responses:
         '200':
-          description: Operación exitosa.
+          description: ZIP con PDF originales y reporte_diplomas.xlsx con metadatos y enlaces de verificación QR.
           schema:
             type: file
         '400':
