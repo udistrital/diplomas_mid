@@ -16,6 +16,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
+// Temporal: la descarga pública entrega sólo los PDF originales.
+// Reactivar cuando la consulta interna de reportes esté configurada en ambos servicios.
+const incluirReporteDiplomasZIP = false
+
 type DiplomasZIPService struct{}
 type DiplomasZIPInput struct {
 	CeremoniaID int64
@@ -147,9 +151,12 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 		}
 		return items[i].Codigo < items[j].Codigo
 	})
-	verificaciones, err := consultarVerificacionesReporte(ctx, items)
-	if err != nil {
-		return nil, err
+	var verificaciones map[string]verificacionReporteDiploma
+	if incluirReporteDiplomasZIP {
+		verificaciones, err = consultarVerificacionesReporte(ctx, items)
+		if err != nil {
+			return nil, err
+		}
 	}
 	filas := make([][]string, 0, len(items))
 	client, err := nuevoClienteS3(ctx)
@@ -159,9 +166,12 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 	var output bytes.Buffer
 	zw := zip.NewWriter(&output)
 	for _, item := range items {
-		diploma, err := buscarDiplomaDigitalExistente(ctx, item.Documento.ID)
-		if err != nil {
-			return nil, err
+		var diploma *diplomaDigitalResponse
+		if incluirReporteDiplomasZIP {
+			diploma, err = buscarDiplomaDigitalExistente(ctx, item.Documento.ID)
+			if err != nil {
+				return nil, err
+			}
 		}
 		key := archivosS3[item.UUID]
 		object, err := client.GetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(diplomasS3Bucket()), Key: aws.String(key)})
@@ -176,18 +186,22 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 		if closeErr != nil {
 			return nil, closeErr
 		}
-		filas = append(filas, filaReporteDiploma(ctx, item, diploma, verificaciones[item.UUID]))
+		if incluirReporteDiplomasZIP {
+			filas = append(filas, filaReporteDiploma(ctx, item, diploma, verificaciones[item.UUID]))
+		}
 	}
-	reporte, err := crearReporteDiplomasExcel(filas)
-	if err != nil {
-		return nil, err
-	}
-	entry, err := zw.Create("reporte_diplomas.xlsx")
-	if err != nil {
-		return nil, err
-	}
-	if _, err := entry.Write(reporte); err != nil {
-		return nil, err
+	if incluirReporteDiplomasZIP {
+		reporte, err := crearReporteDiplomasExcel(filas)
+		if err != nil {
+			return nil, err
+		}
+		entry, err := zw.Create("reporte_diplomas.xlsx")
+		if err != nil {
+			return nil, err
+		}
+		if _, err := entry.Write(reporte); err != nil {
+			return nil, err
+		}
 	}
 	if err := zw.Close(); err != nil {
 		return nil, err
