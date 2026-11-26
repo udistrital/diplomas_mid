@@ -16,14 +16,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-// Temporal: la descarga pública entrega sólo los PDF originales.
-// Reactivar cuando la consulta interna de reportes esté configurada en ambos servicios.
-const incluirReporteDiplomasZIP = false
-
 type DiplomasZIPService struct{}
 type DiplomasZIPInput struct {
-	CeremoniaID int64
-	FacultadID  int64
+	CeremoniaID    int64
+	FacultadID     int64
+	IncluirReporte bool
 }
 type RegistroControlCatalogo struct {
 	Facultades []RegistroControlFacultad `json:"facultades"`
@@ -152,7 +149,7 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 		return items[i].Codigo < items[j].Codigo
 	})
 	var verificaciones map[string]verificacionReporteDiploma
-	if incluirReporteDiplomasZIP {
+	if input.IncluirReporte {
 		verificaciones, err = consultarVerificacionesReporte(ctx, items)
 		if err != nil {
 			return nil, err
@@ -167,7 +164,7 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 	zw := zip.NewWriter(&output)
 	for _, item := range items {
 		var diploma *diplomaDigitalResponse
-		if incluirReporteDiplomasZIP {
+		if input.IncluirReporte {
 			diploma, err = buscarDiplomaDigitalExistente(ctx, item.Documento.ID)
 			if err != nil {
 				return nil, err
@@ -186,11 +183,11 @@ func (DiplomasZIPService) Generar(ctx context.Context, input DiplomasZIPInput) (
 		if closeErr != nil {
 			return nil, closeErr
 		}
-		if incluirReporteDiplomasZIP {
+		if input.IncluirReporte {
 			filas = append(filas, filaReporteDiploma(ctx, item, diploma, verificaciones[item.UUID]))
 		}
 	}
-	if incluirReporteDiplomasZIP {
+	if input.IncluirReporte {
 		reporte, err := crearReporteDiplomasExcel(filas)
 		if err != nil {
 			return nil, err

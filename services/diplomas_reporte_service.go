@@ -3,9 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
-	beego "github.com/beego/beego/v2/server/web"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 
@@ -24,18 +22,10 @@ type verificacionReporteDiploma struct {
 }
 
 func consultarVerificacionesReporte(ctx context.Context, items []diplomaZIPItem) (map[string]verificacionReporteDiploma, error) {
-	secret, _ := beego.AppConfig.String("DiplomasReportServiceKey")
-	if strings.TrimSpace(secret) == "" || strings.HasPrefix(secret, "${") {
-		secret = os.Getenv("DIPLOMAS_REPORT_SERVICE_KEY")
-	}
-	secret = strings.TrimSpace(secret)
-	if len([]rune(secret)) < 32 {
-		return nil, fmt.Errorf("%w: no está configurada la consulta interna para el reporte de diplomas", ErrInvalidState)
-	}
 	base := strings.TrimRight(firmaElectronicaMidURL(), "/")
 	parsed, err := url.Parse(base)
-	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && (parsed.Scheme != "http" || (parsed.Hostname() != "localhost" && parsed.Hostname() != "127.0.0.1" && parsed.Hostname() != "::1"))) {
-		return nil, fmt.Errorf("%w: la consulta del reporte requiere HTTPS; HTTP sólo se permite por loopback", ErrInvalidInput)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+		return nil, fmt.Errorf("%w: URL de Firma Electrónica inválida", ErrInvalidInput)
 	}
 	result := make(map[string]verificacionReporteDiploma, len(items))
 	for start := 0; start < len(items); start += 100 {
@@ -56,9 +46,8 @@ func consultarVerificacionesReporte(ctx context.Context, items []diplomaZIPItem)
 			wanted[item.UUID] = item.Documento.ID
 		}
 		payload := struct {
-			ServiceKey string   `json:"service_key"`
-			UUIDs      []string `json:"uuid_documentos"`
-		}{secret, ids}
+			UUIDs []string `json:"uuid_documentos"`
+		}{ids}
 		var response struct {
 			Firmas []verificacionReporteDiploma `json:"firmas"`
 		}

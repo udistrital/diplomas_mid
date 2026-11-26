@@ -401,6 +401,12 @@ paths:
         required: false
         type: integer
         description: Facultad id.
+      - name: incluir_reporte
+        in: query
+        required: false
+        type: boolean
+        default: false
+        description: Agregar reporte Excel con metadatos y URL original del QR.
       responses:
         '200':
           description: ZIP con PDF originales y reporte_diplomas.xlsx con metadatos y enlaces de verificación QR.

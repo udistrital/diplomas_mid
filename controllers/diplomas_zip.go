@@ -37,8 +37,17 @@ func (c *DiplomasZIPController) Descargar() {
 	}
 	ceremoniaID, _ := strconv.ParseInt(c.GetString("ceremonia_id"), 10, 64)
 	facultadID, _ := strconv.ParseInt(c.GetString("facultad_id"), 10, 64)
+	incluirReporte := false
+	if raw := c.GetString("incluir_reporte"); raw != "" {
+		var err error
+		incluirReporte, err = strconv.ParseBool(raw)
+		if err != nil {
+			c.writeError(http.StatusBadRequest, services.ErrInvalidInput)
+			return
+		}
+	}
 	ctx := context.WithValue(c.Ctx.Request.Context(), "Authorization", token)
-	content, err := c.Service.Generar(ctx, services.DiplomasZIPInput{CeremoniaID: ceremoniaID, FacultadID: facultadID})
+	content, err := c.Service.Generar(ctx, services.DiplomasZIPInput{CeremoniaID: ceremoniaID, FacultadID: facultadID, IncluirReporte: incluirReporte})
 	if err != nil {
 		c.writeError(mapServiceError(err), err)
 		return
